@@ -27,7 +27,8 @@ export function usePredictionData(wallet, getSigner) {
   const [now,            setNow]            = useState(Math.floor(Date.now() / 1000));
   const [betTokenBal,    setBetTokenBal]    = useState({ 0: "0", 1: "0" });
   const [marketTab,      setMarketTab]      = useState("active");
-  const [archivedIds,    setArchivedIds]    = useState(() => { try { return JSON.parse(localStorage.getItem("vt_archived_ids") || "[]"); } catch { return []; } });
+  const [archivedIds,    setArchivedIds]    = useState(() => { try { return JSON.parse(localStorage.getItem("vt_archived") || "[]"); } catch { return []; } });
+  const [hiddenIds,      setHiddenIds]      = useState(() => { try { return JSON.parse(localStorage.getItem("vt_hidden") || "[]"); } catch { return []; } });
   const [pendingFees,    setPendingFees]    = useState({ usdc: "0", eurc: "0" });
   const [isPaused,       setIsPaused]       = useState(false);
   const [globalCfg,      setGlobalCfg]      = useState({ minBet: "1", feeBps: "200" });
@@ -48,13 +49,16 @@ export function usePredictionData(wallet, getSigner) {
 
   const classifyMarket = useCallback((m) => {
     const status    = Number(m.status);
-    const isArchived = archivedIds.includes(Number(m.id));
-    if (isArchived) return "ended";
-    if (status === 2) return "ended";
-    if (status === 0) return "active";
+    const endTime   = Number(m.endTime);
+    const id        = Number(m.id);
+    if (hiddenIds.includes(id)) return "hidden";
+    if (archivedIds.includes(id)) return "ended";
+    if (status === 2) return "hidden";
+    if (status === 0 && endTime > now) return "active";
+    if (status === 0 && endTime <= now) return "ended";
     if (status === 1) return "resolved";
     return "ended";
-  }, [archivedIds]);
+  }, [now, archivedIds, hiddenIds]);
 
   const isFullyClaimed = useCallback((m) => {
     if (Number(m.status) !== 1) return false;
@@ -276,10 +280,82 @@ export function usePredictionData(wallet, getSigner) {
     })();
   }, [markets]);
 
-  useEffect(() => { localStorage.setItem("vt_archived_ids", JSON.stringify(archivedIds)); }, [archivedIds]);
 
-  const softArchiveMarket = (id) => setArchivedIds(p => [...new Set([...p, Number(id)])]);
-  const unarchiveMarket = (id) => setArchivedIds(p => p.filter(x => x !== Number(id)));
+  useEffect(() => { localStorage.setItem("vt_archived", JSON.stringify(archivedIds)); }, [archivedIds]);
+  useEffect(() => { localStorage.setItem("vt_hidden", JSON.stringify(hiddenIds)); }, [hiddenIds]);
+
+  const softArchiveMarket = async (id, notify) => {
+    try {
+      const mkt = markets.find(m => Number(m.id) === Number(id));
+      const status = mkt ? Number(mkt.status) : 0;
+
+      if (status === 0) {
+        // Active market — on-chain cancelMarket (shows wallet popup)
+        const signer = await getSigner();
+        const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
+        await (await pm.cancelMarket(id)).wait();
+        await fetchMarkets(signer);
+      }
+      // All markets: add to archived set (resolved markets skip on-chain tx)
+      setArchivedIds(p => [...new Set([...p, Number(id)])]);
+      if (notify) notify("Moved to Ended Markets", "success");
+    } catch (e) {
+      if (notify) notify(e?.reason?.slice(0, 60) || e?.message?.slice(0, 60) || "Failed", "error");
+    }
+  };
+  const unarchiveMarket = async (id, notify) => {
+    setArchivedIds(p => p.filter(x => x !== Number(id)));
+    try {
+      const signer = await getSigner();
+      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
+      const ts = Math.floor(Date.now() / 1000) + 86400 * 365;
+      await (await pm.setMarketEndTime(id, ts)).wait();
+      await fetchMarkets(signer);
+      if (notify) notify("Restored", "success");
+    } catch (e) {
+      if (notify) notify(e?.reason || "Failed", "error");
+    }
+  };
+  const cancelAllPastOnChain = async (notify, setProgress) => {
+    if (!window.ethereum) {
+      notify("MetaMask not installed", "error");
+      if (setProgress) setProgress(false);
+      return;
+    }
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
+      const toCancel = markets.filter(m => Number(m.status) === 0 && Number(m.endTime) <= now);
+      const toArchive = markets.filter(m => Number(m.status) === 1);
+      const total = toCancel.length + toArchive.length;
+      if (total === 0) {
+        notify("No past markets", "success");
+        if (setProgress) setProgress(false);
+        return;
+      }
+      let done = 0;
+      for (const m of toCancel) {
+        try {
+          if (setProgress) setProgress(`Cancelling #${m.id}...`);
+          const tx = await pm.cancelMarket(m.id);
+          await tx.wait();
+          done++;
+        } catch { done++; }
+      }
+      if (toArchive.length > 0) {
+        setArchivedIds(p => [...new Set([...p, ...toArchive.map(m => Number(m.id))])]);
+        done += toArchive.length;
+      }
+      if (setProgress) setProgress(false);
+      await fetchMarkets(signer);
+      notify(`${done} cleared`, "success");
+    } catch (e) {
+      if (setProgress) setProgress(false);
+      notify("User rejected or wallet error", "error");
+    }
+  };
+
   const saveMktImage = (id, url) => {
     setMktImages(p => { const n = { ...p, [id.toString()]: url }; localStorage.setItem("vt_mkt_images", JSON.stringify(n)); return n; });
   };
@@ -304,5 +380,6 @@ export function usePredictionData(wallet, getSigner) {
     fetchContractConfig, fetchPendingFees,
     isPaused, setIsPaused, globalCfg, setGlobalCfg,
     softArchiveMarket, unarchiveMarket, saveMktImage, saveMktOptions,
+    hiddenIds, setHiddenIds, cancelAllPastOnChain,
   };
 }

@@ -22,6 +22,7 @@ export default function Predict({
   mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading, payoutEst,
   softArchiveMarket, unarchiveMarket,
   setGlobalCfg, setIsPaused,
+  hiddenIds, setHiddenIds,
 }) {
   const [cfgSaving, setCfgSaving] = useState(false);
   const [pauseSaving, setPauseSaving] = useState(false);
@@ -181,6 +182,7 @@ export default function Predict({
   const activeMkts   = markets.filter(m => classifyMarket(m) === "active");
   const resolvedMkts = markets.filter(m => classifyMarket(m) === "resolved" && !isFullyClaimed(m));
   const endedMkts    = markets.filter(m => classifyMarket(m) === "ended" || isFullyClaimed(m));
+  const hiddenCount  = markets.filter(m => classifyMarket(m) === "hidden").length;
 
   return (
     <div className="pg">
@@ -189,7 +191,7 @@ export default function Predict({
         {[
           { key: "active", label: "Active", badge: activeMkts.length },
           { key: "resolved", label: "Resolved", badge: resolvedMkts.length, cls: "claim" },
-          { key: "ended", label: "Archived", badge: endedMkts.length, cls: "ended" },
+          { key: "ended", label: "Ended Markets", badge: endedMkts.length, cls: "ended" },
         ].map(t => (
           <button key={t.key} className={`mkt-lifecycle-tab ${marketTab === t.key ? "active" : ""}`}
             onClick={() => setMarketTab(t.key)}>
@@ -199,8 +201,14 @@ export default function Predict({
         ))}
       </div>
       {marketTab === "active" && <div className="mkt-tab-banner active">Place bets on live markets.</div>}
-      {marketTab === "resolved" && <div className="mkt-tab-banner resolved">Claim winnings before archive.</div>}
+      {marketTab === "resolved" && <div className="mkt-tab-banner resolved">Claim winnings before they expire.</div>}
       {marketTab === "ended" && <div className="mkt-tab-banner ended">Preserved on-chain.</div>}
+      {hiddenCount > 0 && isOwner && (
+        <div className="mkt-tab-banner" style={{ background: '#2a2a2a', color: '#999', borderColor: '#3a3a3a' }}>
+          {hiddenCount} markets hidden. <button className="mkt-unarchive-btn" style={{ fontSize: '.72rem', padding: '3px 10px', marginLeft: 6 }}
+            onClick={() => setHiddenIds([])}>Unhide All</button>
+        </div>
+      )}
 
       {/* Owner Panel */}
       {isOwner && (
@@ -235,6 +243,26 @@ export default function Predict({
           </div>
           <BrandingPanel siteLogo={siteLogo} siteName={siteName} getSigner={getSigner}
             PM_ADDRESS={PM_ADDRESS} PM_ABI={PM_ABI} setSiteLogo={setSiteLogo} setSiteName={setSiteName} notify={notify} />
+          {/* Hide / Cancel Past Markets */}
+          {markets.filter(m => classifyMarket(m) === 'resolved' || classifyMarket(m) === 'ended').length > 0 && (
+            <div className="owner-section">
+              <span className="fee-label">Past Markets ({markets.filter(m => classifyMarket(m) === 'resolved' || classifyMarket(m) === 'ended').length}):</span>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                <button className="mkt-archive-btn" style={{ fontSize: '.75rem', padding: '5px 14px' }}
+                  onClick={() => {
+                    const ids = markets.filter(m => classifyMarket(m) === 'resolved' || classifyMarket(m) === 'ended').map(m => Number(m.id));
+                    setHiddenIds(p => [...new Set([...p, ...ids])]);
+                    notify('Hidden ' + ids.length + ' markets', 'success');
+                  }}>
+                  Hide All Past
+                </button>
+                <button className="mkt-unarchive-btn" style={{ fontSize: '.75rem', padding: '5px 14px' }}
+                  onClick={() => { setHiddenIds([]); notify('All visible again', 'success'); }}>
+                  Show All
+                </button>
+              </div>
+            </div>
+          )}
           <div className="owner-section">
             <span className="fee-label">Global Settings:</span>
             <div className="owner-row">
@@ -395,7 +423,7 @@ export default function Predict({
           <p className="card-lbl">
             {marketTab === "active" && "Active"}
             {marketTab === "resolved" && "Resolved"}
-            {marketTab === "ended" && "Archived"}
+            {marketTab === "ended" && "Ended Markets"}
           </p>
           <div className="live-tag"><span className="live-dot" />On-Chain</div>
         </div>
@@ -426,7 +454,7 @@ export default function Predict({
                 )}
                 <div className="mkt-q">{m.question}
                   {cancelled && <span className="mkt-cancelled-badge">Cancelled</span>}
-                  {isEnded && !cancelled && <span className="mkt-ended-badge">Archived</span>}
+                  {isEnded && !cancelled && <span className="mkt-ended-badge">Ended</span>}
                 </div>
                 <div className="mkt-odds">
                   <span className="mkt-out yes">{m.outcomeA} {pctA}%</span>
@@ -503,8 +531,8 @@ export default function Predict({
                 {/* Owner archive */}
                 {isOwner&&<div className="mkt-owner-archive-row">
                   {classifyMarket(m)==="ended"||isFullyClaimed(m)
-                    ?<button className="mkt-unarchive-btn" onClick={()=>unarchiveMarket(m.id)}>Unarchive</button>
-                    :<button className="mkt-archive-btn" onClick={()=>{if(window.confirm(`Archive #${Number(m.id)}?`))softArchiveMarket(m.id);}}>Archive</button>}
+                    ?<button className="mkt-unarchive-btn" onClick={()=>unarchiveMarket(m.id, notify)}>Unarchive</button>
+                    :<button className="mkt-archive-btn" onClick={()=>{if(window.confirm(`Archive #${Number(m.id)}?`))softArchiveMarket(m.id, notify);}}>Archive</button>}
                 </div>}
               </div>
             );
