@@ -5,6 +5,8 @@ import {
 } from '../constants/contracts.js';
 import { trimAddr, formatCountdown } from '../utils/format.js';
 import BrandingPanel from './BrandingPanel.jsx';
+import PredictLeaderboard from './PredictLeaderboard.jsx';
+import { usePredictionLeaderboard } from '../hooks/usePredictionLeaderboard.js';
 
 export default function Predict({
   wallet, getSigner, notify, markets, mkLoading, myBets, myAllBets,
@@ -35,6 +37,10 @@ export default function Predict({
   const [endTimeSaving, setEndTimeSaving] = useState(null);
   const [cancelSaving, setCancelSaving] = useState(null);
   const [emergWd, setEmergWd] = useState(false);
+
+  // Prediction leaderboard
+  const { lbData, lbLoading, lbError, lbTab, setLbTab, fetchLeaderboard } =
+    usePredictionLeaderboard(wallet, isOwner);
 
   const withdrawFeesOnChain = async (tokenAddr, tokenName) => {
     try {
@@ -192,18 +198,30 @@ export default function Predict({
           { key: "active", label: "Active", badge: activeMkts.length },
           { key: "resolved", label: "Resolved", badge: resolvedMkts.length, cls: "claim" },
           { key: "ended", label: "Ended Markets", badge: endedMkts.length, cls: "ended" },
+          { key: "leaderboard", label: "🏆 Leaderboard", badge: null, cls: "lb" },
         ].map(t => (
           <button key={t.key} className={`mkt-lifecycle-tab ${marketTab === t.key ? "active" : ""}`}
             onClick={() => setMarketTab(t.key)}>
             {t.label}
-            {t.badge > 0 && <span className={`mkt-tab-badge ${t.cls || ""}`}>{t.badge}</span>}
+            {t.badge !== null && t.badge > 0 && <span className={`mkt-tab-badge ${t.cls || ""}`}>{t.badge}</span>}
           </button>
         ))}
       </div>
       {marketTab === "active" && <div className="mkt-tab-banner active">Place bets on live markets.</div>}
       {marketTab === "resolved" && <div className="mkt-tab-banner resolved">Claim winnings before they expire.</div>}
       {marketTab === "ended" && <div className="mkt-tab-banner ended">Preserved on-chain.</div>}
-      {hiddenCount > 0 && isOwner && (
+      {marketTab === "leaderboard" && (
+        <PredictLeaderboard
+          wallet={wallet}
+          lbData={lbData}
+          lbLoading={lbLoading}
+          lbError={lbError}
+          lbTab={lbTab}
+          setLbTab={setLbTab}
+          fetchLeaderboard={fetchLeaderboard}
+        />
+      )}
+      {marketTab !== "leaderboard" && hiddenCount > 0 && isOwner && (
         <div className="mkt-tab-banner" style={{ background: '#2a2a2a', color: '#999', borderColor: '#3a3a3a' }}>
           {hiddenCount} markets hidden. <button className="mkt-unarchive-btn" style={{ fontSize: '.72rem', padding: '3px 10px', marginLeft: 6 }}
             onClick={() => setHiddenIds([])}>Unhide All</button>
@@ -211,7 +229,7 @@ export default function Predict({
       )}
 
       {/* Owner Panel */}
-      {isOwner && (
+      {marketTab !== "leaderboard" && isOwner && (
         <div className="card">
           <div className="lb-top">
             <p className="card-lbl">Owner Panel</p>
@@ -418,6 +436,7 @@ export default function Predict({
       )}
 
       {/* Market Cards */}
+      {marketTab !== "leaderboard" && (
       <div className="card">
         <div className="lb-top">
           <p className="card-lbl">
@@ -539,6 +558,7 @@ export default function Predict({
           });
         })()}
       </div>
+      )}
     </div>
   );
 }

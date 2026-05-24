@@ -2498,3 +2498,211 @@ body {
 }
 .si-modal-btn.secondary:hover { border-color: var(--purple); color: var(--purple); }
 .si-modal-btn.secondary:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ════════════════════════════════════════
+   PREDICTION LEADERBOARD
+   ════════════════════════════════════════ */
+
+.lb-icon { margin-right: 6px; }
+
+.lb-auto-row {
+  display: flex; align-items: center; gap: 6px;
+}
+
+.lb-auto-btn {
+  font-size: .7rem; padding: 3px 10px; border-radius: 20px;
+  border: 1px solid var(--line2); background: var(--surf2);
+  color: var(--sub); cursor: pointer; font-weight: 600;
+  letter-spacing: .3px; transition: all .15s;
+}
+.lb-auto-btn.active {
+  border-color: var(--green); color: var(--green);
+  background: rgba(74,222,128,.1);
+}
+.lb-auto-btn:hover { opacity: .85; }
+
+.lb-refresh-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  font-size: 1rem; border: 1px solid var(--line2);
+  background: var(--surf2); color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.lb-refresh-btn:hover { background: var(--surf); border-color: var(--purple); }
+.lb-refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.lb-tabs {
+  display: flex; gap: 4px; margin: 0 0 14px; padding: 0;
+  background: var(--surf); border-radius: 12px; padding: 3px;
+}
+
+.lb-tab {
+  flex: 1; padding: 8px 6px; font-size: .78rem; font-weight: 600;
+  border: none; border-radius: 9px; cursor: pointer;
+  background: transparent; color: var(--sub);
+  transition: all .15s; white-space: nowrap;
+}
+.lb-tab.active {
+  background: var(--surf2); color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.lb-tab:hover:not(.active) { color: var(--text); opacity: .8; }
+
+/* Podium */
+.lb-podium {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.lb-podium-card {
+  text-align: center;
+  padding: 14px 8px;
+  border-radius: var(--r2);
+  background: var(--surf2);
+  border: 1px solid var(--line);
+  transition: transform .15s;
+}
+.lb-podium-card.gold {
+  border-color: rgba(255,215,0,.25);
+  background: linear-gradient(180deg, rgba(255,215,0,.06) 0%, var(--surf2) 100%);
+}
+.lb-podium-card.silver {
+  border-color: rgba(192,192,192,.2);
+  background: linear-gradient(180deg, rgba(192,192,192,.04) 0%, var(--surf2) 100%);
+}
+.lb-podium-card.bronze {
+  border-color: rgba(205,127,50,.2);
+  background: linear-gradient(180deg, rgba(205,127,50,.04) 0%, var(--surf2) 100%);
+}
+.lb-podium-card:hover { transform: translateY(-2px); }
+
+.lb-podium-rank {
+  font-size: 1.6rem; margin-bottom: 6px; line-height: 1;
+}
+.lb-podium-addr {
+  font-size: .75rem; font-weight: 600; margin-bottom: 6px;
+}
+.lb-podium-addr a {
+  color: var(--text); text-decoration: none;
+}
+.lb-podium-addr a:hover { color: var(--purple); }
+
+.lb-podium-you {
+  display: inline-block; font-size: .6rem; font-weight: 700;
+  text-transform: uppercase; color: var(--purple);
+  background: rgba(184,169,255,.12);
+  padding: 1px 6px; border-radius: 4px; margin-left: 4px;
+  vertical-align: middle;
+}
+
+.lb-podium-profit {
+  font-size: .95rem; font-weight: 800; margin-bottom: 4px;
+}
+
+.lb-podium-stats {
+  font-size: .68rem; color: var(--dim);
+}
+
+/* Table */
+.lb-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+
+.lb-table thead th {
+  text-align: left;
+  font-size: .7rem;
+  font-weight: 600;
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lb-th-rank { width: 36px; text-align: center; }
+.lb-th-wallet { min-width: 100px; }
+.lb-th-num { text-align: right; min-width: 55px; }
+
+.lb-table tbody tr {
+  transition: background .12s;
+  border-bottom: 1px solid var(--line);
+}
+.lb-table tbody tr:hover { background: var(--surf2); }
+.lb-table tbody tr.is-you {
+  background: rgba(184,169,255,.06);
+}
+.lb-table tbody tr.is-you:hover { background: rgba(184,169,255,.1); }
+
+.lb-td-rank { text-align: center; padding: 10px 8px; }
+.lb-td-wallet { padding: 10px 8px; }
+.lb-td-wallet a {
+  color: var(--text); text-decoration: none; font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace; font-size: .73rem;
+}
+.lb-td-wallet a:hover { color: var(--purple); }
+
+.lb-you-badge {
+  display: inline-block; font-size: .58rem; font-weight: 700;
+  text-transform: uppercase; color: var(--purple);
+  background: rgba(184,169,255,.12);
+  padding: 1px 5px; border-radius: 4px; margin-left: 5px;
+  vertical-align: middle;
+}
+
+.lb-rank-emoji { font-size: 1.1rem; }
+.lb-rank-num { font-size: .75rem; color: var(--dim); font-weight: 500; }
+
+.lb-td-num {
+  text-align: right; padding: 10px 8px; color: var(--sub);
+  font-weight: 500;
+}
+
+.lb-wr-bar {
+  display: inline-block; width: 36px; height: 4px;
+  border-radius: 2px; background: var(--surf2);
+  vertical-align: middle; margin-right: 6px;
+  overflow: hidden;
+}
+.lb-wr-fill { height: 100%; border-radius: 2px; transition: width .3s ease; }
+
+.lb-td-profit {
+  text-align: right; padding: 10px 8px; font-weight: 700;
+}
+.lb-td-profit.positive { color: var(--green); }
+.lb-td-profit.negative { color: #f87171; }
+
+.lb-footer {
+  display: flex; justify-content: space-between;
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: .7rem; color: var(--dim);
+}
+
+/* Leaderboard tab in market lifecycle */
+.mkt-lifecycle-tab .lb { margin-left: auto; }
+
+/* Mobile: stack podium */
+@media (max-width: 480px) {
+  .lb-podium {
+    grid-template-columns: 1fr;
+  }
+  .lb-podium-card {
+    display: flex; align-items: center; gap: 10px;
+    text-align: left; padding: 10px 12px;
+  }
+  .lb-podium-rank { margin-bottom: 0; font-size: 1.3rem; min-width: 28px; }
+  .lb-podium-profit { margin-bottom: 0; margin-left: auto; white-space: nowrap; }
+  .lb-podium-stats { display: none; }
+  .lb-table { font-size: .72rem; }
+  .lb-table thead th { padding: 8px 6px; font-size: .65rem; }
+  .lb-table tbody td { padding: 8px 6px; }
+}
