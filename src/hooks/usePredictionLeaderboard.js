@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
+
+const BLOCK_CHUNK = 8000; // Arc testnet limit is 10,000, use 8k to be safe
 
 export function usePredictionLeaderboard(wallet, isOwner) {
   const [lbData, setLbData] = useState([]);
@@ -13,14 +15,50 @@ export function usePredictionLeaderboard(wallet, isOwner) {
     return new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
   };
 
+  const queryEventsInChunks = async (filter, fromBlock, toBlock, provider) => {
+    const events = [];
+    let from = Number(fromBlock);
+    const to = Number(toBlock);
+
+    while (from <= to) {
+      const end = Math.min(from + BLOCK_CHUNK, to);
+      try {
+        const chunk = await provider.getLogs({
+          ...filter,
+          fromBlock: `0x${from.toString(16)}`,
+          toBlock: `0x${end.toString(16)}`,
+        });
+        // Parse raw logs
+        const iface = new ethers.Interface(PM_ABI);
+        for (const log of chunk) {
+          try {
+            const parsed = iface.parseLog({ topics: [...log.topics], data: log.data });
+            if (parsed) {
+              events.push({ ...log, parsed });
+            }
+          } catch {}
+        }
+      } catch (e) {
+        console.warn(`Chunk ${from}-${end} failed, skipping:`, e?.reason || e?.message);
+      }
+      from = end + 1;
+    }
+    return events;
+  };
+
   const fetchLeaderboard = useCallback(async () => {
     try {
       setLbLoading(true);
       setLbError('');
       const provider = getProvider();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
 
-      // 1. Get all markets to know resolved status
+      // Get block range
+      const latestBlock = await provider.getBlockNumber();
+      // Arc testnet started fairly recently, use block 0 as starting point
+      // but we need to handle the range limit
+
+      // 1. Get all markets via contract call (not events)
+      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
       const allMarkets = await pm.getAllMarkets();
       const resolvedMarkets = {};
       for (const m of allMarkets) {
@@ -32,76 +70,80 @@ export function usePredictionLeaderboard(wallet, isOwner) {
         }
       }
 
-      // 2. Query all BetPlaced events
-      const betFilter = pm.filters.BetPlaced();
-      const betEvents = await pm.queryFilter(betFilter, 0, 'latest');
+      // 2. Query BetPlaced events in chunks
+      const betTopic = ethers.id('BetPlaced(uint256,address,uint8,uint256,uint256)');
+      const claimTopic = ethers.id('WinningsClaimed(uint256,address,uint256,uint256)');
 
-      // 3. Query all WinningsClaimed events
-      const claimFilter = pm.filters.WinningsClaimed();
-      const claimEvents = await pm.queryFilter(claimFilter, 0, 'latest');
+      const betFilter = {
+        address: PM_ADDRESS,
+        topics: [betTopic],
+      };
+      const claimFilter = {
+        address: PM_ADDRESS,
+        topics: [claimTopic],
+      };
 
-      // 4. Aggregate per user
+      const betEvents = await queryEventsInChunks(betFilter, 0, latestBlock, provider);
+      const claimEvents = await queryEventsInChunks(claimFilter, 0, latestBlock, provider);
+
+      // 3. Aggregate per user
       const users = {};
-      let currentBlock = 0;
-      try { currentBlock = await provider.getBlockNumber(); } catch {}
 
       // Process bet events
       for (const evt of betEvents) {
-        const addr = evt.args.user.toLowerCase();
-        const mid = Number(evt.args.marketId);
-        const outcome = Number(evt.args.outcome);
-        const amount = Number(ethers.formatUnits(evt.args.amount, 6));
-        const ts = 0; // block timestamp not easily available in queryFilter, estimate
+        const parsed = evt.parsed;
+        if (!parsed) continue;
+        try {
+          const args = parsed.args || parsed;
+          const addr = String(args[1] || args.user).toLowerCase();
+          const mid = Number(args[0] || args.marketId);
+          const outcome = Number(args[2] || args.outcome);
+          const amount = Number(ethers.formatUnits(args[3] || args.amount, 6));
 
-        if (!users[addr]) {
-          users[addr] = {
-            address: addr,
-            totalBets: 0,
-            totalStaked: 0,
-            wins: 0,
-            losses: 0,
-            totalWon: 0,
-            // For weekly: track timestamps
-            betTimestamps: [],
-          };
-        }
-
-        users[addr].totalBets++;
-        users[addr].totalStaked += amount;
-
-        // If market is resolved, check win/loss
-        if (resolvedMarkets[mid]) {
-          if (outcome === resolvedMarkets[mid].winningOutcome) {
-            users[addr].wins++;
-          } else {
-            users[addr].losses++;
+          if (!users[addr]) {
+            users[addr] = {
+              address: addr,
+              totalBets: 0,
+              totalStaked: 0,
+              wins: 0,
+              losses: 0,
+              totalWon: 0,
+            };
           }
-        }
 
-        // Store block for weekly filtering (use block as proxy for time)
-        if (evt.blockNumber) {
-          users[addr]._lastBlock = Math.max(users[addr]._lastBlock || 0, evt.blockNumber);
-        }
+          users[addr].totalBets++;
+          users[addr].totalStaked += amount;
+
+          if (resolvedMarkets[mid]) {
+            if (outcome === resolvedMarkets[mid].winningOutcome) {
+              users[addr].wins++;
+            } else {
+              users[addr].losses++;
+            }
+          }
+        } catch {}
       }
 
-      // Process claim events for totalWon
+      // Process claim events
       for (const evt of claimEvents) {
-        const addr = evt.args.user.toLowerCase();
-        const amount = Number(ethers.formatUnits(evt.args.amount, 6));
-        if (users[addr]) {
-          users[addr].totalWon += amount;
-        }
+        const parsed = evt.parsed;
+        if (!parsed) continue;
+        try {
+          const args = parsed.args || parsed;
+          const addr = String(args[1] || args.user).toLowerCase();
+          const amount = Number(ethers.formatUnits(args[2] || args.amount, 6));
+          if (users[addr]) {
+            users[addr].totalWon += amount;
+          }
+        } catch {}
       }
 
-      // 5. Convert to array and compute derived stats
+      // 4. Compute stats
       let result = Object.values(users).map(u => {
-        const profitable = u.totalWon > 0 || u.wins > 0;
         const resolvedTotal = u.wins + u.losses;
         const winRate = resolvedTotal > 0
           ? Math.round((u.wins / resolvedTotal) * 100)
           : 0;
-        // Approximate profit on resolved: totalWon - (wins * avgStake)
-        // Simpler: profit = totalWon - totalStaked_adjusted
         const avgStake = u.totalBets > 0 ? u.totalStaked / u.totalBets : 0;
         const resolvedStaked = resolvedTotal * avgStake;
         const profit = u.totalWon - resolvedStaked;
@@ -119,14 +161,11 @@ export function usePredictionLeaderboard(wallet, isOwner) {
         };
       });
 
-      // Sort by profit descending (fallback: totalWon)
       result.sort((a, b) => {
         if (b.profit !== a.profit) return b.profit - a.profit;
         if (b.totalWon !== a.totalWon) return b.totalWon - a.totalWon;
         return b.winRate - a.winRate;
       });
-
-      // Remove users with 0 bets
       result = result.filter(u => u.totalBets > 0);
 
       setLbData(result);

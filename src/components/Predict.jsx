@@ -198,7 +198,7 @@ export default function Predict({
           { key: "active", label: "Active", badge: activeMkts.length },
           { key: "resolved", label: "Resolved", badge: resolvedMkts.length, cls: "claim" },
           { key: "ended", label: "Ended Markets", badge: endedMkts.length, cls: "ended" },
-          { key: "leaderboard", label: "🏆 Leaderboard", badge: null, cls: "lb" },
+          { key: "leaderboard", label: "Leaderboard", badge: null, cls: "lb" },
         ].map(t => (
           <button key={t.key} className={`mkt-lifecycle-tab ${marketTab === t.key ? "active" : ""}`}
             onClick={() => setMarketTab(t.key)}>
