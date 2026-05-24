@@ -4,12 +4,8 @@ export default function Header({ wallet, siteLogo, siteName, isDark, disconnectW
   return (
     <header className="header">
       <div className="brand">
-        {siteLogo ? (
-          <img src={siteLogo} className="brand-logo-img" alt="logo"
-            onError={() => {}} />
-        ) : (
-          <span className="brand-logo">V</span>
-        )}
+        <img src={siteLogo || "/logo.jpg"} className="brand-logo-img" alt="logo"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         <span className="brand-name">{siteName || "Vaultora"}</span>
       </div>
       <div className="header-right">
