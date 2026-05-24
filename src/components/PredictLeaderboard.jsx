@@ -1,22 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { trimAddr } from '../utils/format.js';
 
 export default function PredictLeaderboard({
   wallet, lbData, lbLoading, lbError, lbTab, setLbTab, fetchLeaderboard,
 }) {
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const fetchedRef = useRef(false);
 
+  // Initial fetch only once
   useEffect(() => {
-    if (lbData.length === 0 && !lbLoading && !lbError) {
+    if (!fetchedRef.current) {
+      fetchedRef.current = true;
       fetchLeaderboard();
     }
   }, []); // eslint-disable-line
 
+  // Auto refresh — no interval if loading
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(fetchLeaderboard, 15000);
+    const id = setInterval(() => {
+      if (!lbLoading) fetchLeaderboard();
+    }, 15000);
     return () => clearInterval(id);
-  }, [autoRefresh, fetchLeaderboard]);
+  }, [autoRefresh]); // eslint-disable-line
 
   const filtered = (() => {
     if (lbTab === 'all') return lbData;
@@ -46,16 +52,8 @@ export default function PredictLeaderboard({
     return `$${val.toFixed(2)}`;
   };
 
-  const getRankClass = (idx) => {
-    if (idx === 0) return 'rank-1';
-    if (idx === 1) return 'rank-2';
-    if (idx === 2) return 'rank-3';
-    return '';
-  };
-
   return (
     <div className="pg">
-      {/* Header */}
       <div className="lb-top">
         <p className="card-lbl">Prediction Leaderboard</p>
         <div className="lb-auto-row">
@@ -72,7 +70,6 @@ export default function PredictLeaderboard({
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="lb-tabs">
         {[
           { key: 'all', label: 'All-Time' },
@@ -89,7 +86,6 @@ export default function PredictLeaderboard({
         ))}
       </div>
 
-      {/* Content */}
       {lbLoading && lbData.length === 0 ? (
         <div className="card">
           <div className="empty">
@@ -153,7 +149,7 @@ export default function PredictLeaderboard({
               </thead>
               <tbody>
                 {filtered.map((u, idx) => (
-                  <tr key={u.address} className={`lb-row ${getRankClass(idx)} ${u.address === wallet?.toLowerCase() ? 'is-you' : ''}`}>
+                  <tr key={u.address} className={`lb-row ${u.address === wallet?.toLowerCase() ? 'is-you' : ''}`}>
                     <td className="lb-td-rank">
                       {idx < 3 ? (
                         <span className="lb-rank-medal" style={{ color: rankColors[idx], fontWeight: 800 }}>
@@ -194,7 +190,6 @@ export default function PredictLeaderboard({
             </table>
           </div>
 
-          {/* Summary footer */}
           <div className="lb-footer">
             <span>{filtered.length} predictors</span>
             <span>On-Chain Data</span>
