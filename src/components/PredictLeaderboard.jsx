@@ -18,11 +18,8 @@ export default function PredictLeaderboard({
     return () => clearInterval(id);
   }, [autoRefresh, fetchLeaderboard]);
 
-  // Filter by tab
   const filtered = (() => {
     if (lbTab === 'all') return lbData;
-    // 'weekly' filter: shows all for now, since block timestamps aren't precise
-    // But sort by profit first
     if (lbTab === 'top') return lbData.filter(u => u.profit > 0);
     if (lbTab === 'streak') {
       return [...lbData].sort((a, b) => {
@@ -33,7 +30,6 @@ export default function PredictLeaderboard({
     return lbData;
   })();
 
-  const rankEmojis = ['🥇', '🥈', '🥉'];
   const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
 
   const formatProfit = (val) => {
@@ -61,19 +57,17 @@ export default function PredictLeaderboard({
     <div className="pg">
       {/* Header */}
       <div className="lb-top">
-        <p className="card-lbl">
-          <span className="lb-icon">🏆</span> Prediction Leaderboard
-        </p>
+        <p className="card-lbl">Prediction Leaderboard</p>
         <div className="lb-auto-row">
           <button
             className={`lb-auto-btn ${autoRefresh ? 'active' : ''}`}
             onClick={() => setAutoRefresh(v => !v)}
             title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
           >
-            {autoRefresh ? '⟳ Live' : '⟳ Paused'}
+            {autoRefresh ? 'Live' : 'Paused'}
           </button>
           <button className="lb-refresh-btn" onClick={fetchLeaderboard} disabled={lbLoading}>
-            {lbLoading ? <span className="spin" /> : '↻'}
+            {lbLoading ? <span className="spin" /> : 'Refresh'}
           </button>
         </div>
       </div>
@@ -82,8 +76,8 @@ export default function PredictLeaderboard({
       <div className="lb-tabs">
         {[
           { key: 'all', label: 'All-Time' },
-          { key: 'top', label: '📈 Top Gainers' },
-          { key: 'streak', label: '🎯 Best Accuracy' },
+          { key: 'top', label: 'Top Gainers' },
+          { key: 'streak', label: 'Best Accuracy' },
         ].map(t => (
           <button
             key={t.key}
@@ -104,7 +98,7 @@ export default function PredictLeaderboard({
         </div>
       ) : lbError ? (
         <div className="card">
-          <div className="empty" style={{ color: 'var(--red, #f85149)' }}>
+          <div className="empty" style={{ color: '#f85149' }}>
             {lbError}
             <button className="btn-primary" style={{ marginTop: 12, fontSize: '.8rem' }}
               onClick={fetchLeaderboard}>Retry</button>
@@ -113,7 +107,7 @@ export default function PredictLeaderboard({
       ) : filtered.length === 0 ? (
         <div className="card">
           <div className="empty">
-            No prediction data yet. Be the first to place a bet! 🎲
+            No prediction data yet. Be the first to place a bet!
           </div>
         </div>
       ) : (
@@ -122,7 +116,9 @@ export default function PredictLeaderboard({
           <div className="lb-podium">
             {filtered.slice(0, 3).map((u, idx) => (
               <div key={u.address} className={`lb-podium-card ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : 'bronze'}`}>
-                <div className="lb-podium-rank">{rankEmojis[idx]}</div>
+                <div className="lb-podium-rank" style={{ color: rankColors[idx], fontWeight: 800, fontSize: '1.4rem' }}>
+                  #{idx + 1}
+                </div>
                 <div className="lb-podium-addr">
                   <a href={`https://testnet.arcscan.app/address/${u.address}`}
                     target="_blank" rel="noreferrer">
@@ -136,7 +132,7 @@ export default function PredictLeaderboard({
                   {formatProfit(u.profit)}
                 </div>
                 <div className="lb-podium-stats">
-                  {u.winRate}% WR · {u.totalBets} bets
+                  {u.winRate}% WR &middot; {u.totalBets} bets
                 </div>
               </div>
             ))}
@@ -160,7 +156,9 @@ export default function PredictLeaderboard({
                   <tr key={u.address} className={`lb-row ${getRankClass(idx)} ${u.address === wallet?.toLowerCase() ? 'is-you' : ''}`}>
                     <td className="lb-td-rank">
                       {idx < 3 ? (
-                        <span className="lb-rank-emoji">{rankEmojis[idx]}</span>
+                        <span className="lb-rank-medal" style={{ color: rankColors[idx], fontWeight: 800 }}>
+                          {idx + 1}
+                        </span>
                       ) : (
                         <span className="lb-rank-num">{idx + 1}</span>
                       )}
@@ -199,7 +197,7 @@ export default function PredictLeaderboard({
           {/* Summary footer */}
           <div className="lb-footer">
             <span>{filtered.length} predictors</span>
-            <span>Updated: {new Date().toLocaleTimeString()}</span>
+            <span>On-Chain Data</span>
           </div>
         </div>
       )}
