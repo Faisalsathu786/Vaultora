@@ -474,6 +474,20 @@ body {
   letter-spacing: -1px;
 }
 
+.hero-logo-wrap {
+  margin-bottom: 20px;
+}
+
+.hero-logo-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 18px;
+  object-fit: cover;
+  display: block;
+  margin: 0 auto;
+  box-shadow: 0 4px 24px rgba(184,169,255,0.25);
+}
+
 .hero-title {
   font-size: 2rem;
   font-weight: 800;

@@ -27,6 +27,9 @@ export default function Landing({
 
   return (
     <div className="landing">
+      <div className="hero-logo-wrap">
+        <img src="/logo.jpg" className="hero-logo-img" alt="Vaultora" />
+      </div>
       <h1 className="hero-title">
         Earn yield<br />
         <span className="hero-accent">Predict markets</span>
