@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
 
-const CHUNK_SIZE = 5000;
+const CHUNK_SIZE = 9000;
+const LOOKBACK_BLOCKS = 50000;
 
 export function usePredictionLeaderboard(wallet, isOwner) {
   const [lbData, setLbData] = useState([]);
@@ -10,19 +11,41 @@ export function usePredictionLeaderboard(wallet, isOwner) {
   const [lbTab, setLbTab] = useState('all');
   const [lbError, setLbError] = useState('');
 
+  const RPC = "https://rpc.testnet.arc.network";
+
+  // Helper with timeout
+  const fetchWithTimeout = async (url, body, ms = 8000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    try {
+      const res = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message || 'RPC error');
+      return json.result;
+    } finally {
+      clearTimeout(id);
+    }
+  };
+
   const fetchLeaderboard = useCallback(async () => {
     try {
       setLbLoading(true);
       setLbError('');
-      const provider = new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
-      const latestBlock = await provider.getBlockNumber();
 
-      // Use last 100k blocks to keep fast
-      const START_BLOCK = Math.max(0, latestBlock - 100000);
+      // Get latest block
+      const blockResult = await fetchWithTimeout(RPC, {
+        id: 1, jsonrpc: '2.0', method: 'eth_blockNumber', params: [],
+      }, 5000);
+      const latestBlock = parseInt(blockResult, 16);
+      const startBlock = Math.max(0, latestBlock - LOOKBACK_BLOCKS);
 
+      // Get markets via provider (simple contract call)
+      const provider = new ethers.JsonRpcProvider(RPC);
       const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-
-      // Get all markets for resolved status
       const allMarkets = await pm.getAllMarkets();
       const resolvedMarkets = {};
       for (const m of allMarkets) {
@@ -31,42 +54,51 @@ export function usePredictionLeaderboard(wallet, isOwner) {
         }
       }
 
-      // Event signature topics
+      // Topic hashes
       const betTopic = ethers.id('BetPlaced(uint256,address,uint8,uint256,uint256)');
       const claimTopic = ethers.id('WinningsClaimed(uint256,address,uint256,uint256)');
 
-      // Use raw RPC calls for eth_getLogs
-      const getLogsChunked = async (topic, startBlock, endBlock) => {
-        const all = [];
+      // Fetch logs in parallel chunks
+      const fetchChunks = async (topic) => {
+        const promises = [];
         let from = startBlock;
-        while (from <= endBlock) {
-          const to = Math.min(from + CHUNK_SIZE, endBlock);
-          try {
-            const raw = await provider.send('eth_getLogs', [{
-              address: PM_ADDRESS,
-              topics: [topic],
-              fromBlock: '0x' + from.toString(16),
-              toBlock: '0x' + to.toString(16),
-            }]);
-            for (const log of raw) all.push(log);
-          } catch {}
+        while (from <= latestBlock) {
+          const to = Math.min(from + CHUNK_SIZE, latestBlock);
+          const fromHex = '0x' + from.toString(16);
+          const toHex = '0x' + to.toString(16);
+          promises.push((async () => {
+            try {
+              return await fetchWithTimeout(RPC, {
+                id: Math.floor(Math.random() * 1e9),
+                jsonrpc: '2.0',
+                method: 'eth_getLogs',
+                params: [{
+                  address: PM_ADDRESS,
+                  topics: [topic],
+                  fromBlock: fromHex,
+                  toBlock: toHex,
+                }],
+              }, 5000);
+            } catch { return []; }
+          })());
           from = to + 1;
         }
-        return all;
+        const results = await Promise.all(promises);
+        return results.flat();
       };
 
-      const rawBetLogs = await getLogsChunked(betTopic, START_BLOCK, latestBlock);
-      const rawClaimLogs = await getLogsChunked(claimTopic, START_BLOCK, latestBlock);
+      const [rawBetLogs, rawClaimLogs] = await Promise.all([
+        fetchChunks(betTopic),
+        fetchChunks(claimTopic),
+      ]);
 
-      // Decode event args from raw logs
+      // Decode and aggregate
       const iface = new ethers.Interface(PM_ABI);
-      const decode = (rawLog) => {
-        try {
-          return iface.parseLog({ topics: rawLog.topics, data: rawLog.data });
-        } catch { return null; }
+      const decode = (raw) => {
+        try { return iface.parseLog({ topics: raw.topics, data: raw.data }); }
+        catch { return null; }
       };
 
-      // Aggregate
       const users = {};
 
       for (const log of rawBetLogs) {
@@ -94,13 +126,12 @@ export function usePredictionLeaderboard(wallet, isOwner) {
         if (users[addr]) users[addr].totalWon += amount;
       }
 
-      // Compute stats
       let result = Object.values(users).map(u => {
         const resolvedTotal = u.wins + u.losses;
         const winRate = resolvedTotal > 0 ? Math.round((u.wins / resolvedTotal) * 100) : 0;
         const avgStake = u.totalBets > 0 ? u.totalStaked / u.totalBets : 0;
         const profit = u.totalWon - (resolvedTotal * avgStake);
-        return { address: u.address, totalBets: u.totalBets, totalStaked: u.totalStaked, wins: u.wins, losses: u.losses, totalWon: u.totalWon, winRate, profit, resolvedTotal };
+        return { ...u, winRate, profit, resolvedTotal };
       });
 
       result.sort((a, b) => b.profit - a.profit || b.totalWon - a.totalWon || b.winRate - a.winRate);
@@ -108,7 +139,7 @@ export function usePredictionLeaderboard(wallet, isOwner) {
       setLbData(result);
     } catch (e) {
       console.error('Leaderboard error:', e);
-      setLbError(e?.reason || e?.message || 'Failed to load leaderboard');
+      setLbError(e?.reason || e?.message || 'Could not load leaderboard');
     } finally {
       setLbLoading(false);
     }
