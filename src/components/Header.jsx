@@ -1,12 +1,13 @@
 import { trimAddr } from '../utils/format.js';
 
-export default function Header({ wallet, siteLogo, siteName, isDark, disconnectWallet, setIsDark }) {
+export default function Header({ wallet, siteLogo, siteName, isDark, disconnectWallet, setIsDark, onHowItWorks }) {
   return (
     <header className="header">
       <div className="brand">
         <img src={siteLogo || "/logo.jpg"} className="brand-logo-img" alt="logo"
           onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         <span className="brand-name">{siteName || "Vaultora"}</span>
+        <button className="hiw-nav-btn" onClick={onHowItWorks}>How it Works</button>
       </div>
       <div className="header-right">
         <span className="net-badge">Arc Testnet</span>

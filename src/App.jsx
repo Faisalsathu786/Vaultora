@@ -13,10 +13,12 @@ import Portfolio from './components/Portfolio.jsx';
 import Predict from './components/Predict.jsx';
 import History from './components/History.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
+import HowItWorks from './components/HowItWorks.jsx';
 import './App.css';
 
 export default function App() {
   const [page, setPage] = useState("home");
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [isDark, setIsDark] = useState(() => (localStorage.getItem("vt_theme") || "dark") === "dark");
   const [tokenIdx, setTokenIdx] = useState(0);
   const [tierIdx, setTierIdx] = useState(0);
@@ -276,7 +278,8 @@ export default function App() {
     <div className="app">
       <Toast toast={toast} />
       <Header wallet={wallet} siteLogo={siteLogo} siteName={siteName}
-        isDark={isDark} disconnectWallet={disconnectWallet} setIsDark={setIsDark} />
+        isDark={isDark} disconnectWallet={disconnectWallet} setIsDark={setIsDark}
+        onHowItWorks={() => setShowHowItWorks(true)} />
 
       {!wallet ? (
         <Landing
@@ -354,8 +357,10 @@ export default function App() {
 
       <footer className="footer">
         <a href="https://testnet.arcscan.app/address/0x43EB3BE71cadf57Ac1323876b26660AF07E2fef5"
-          target="_blank" rel="noreferrer">Verified on ArcScan ↗</a>
+          target="_blank" rel="noreferrer">Verified on ArcScan</a>
       </footer>
+
+      <HowItWorks isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} isDark={isDark} />
     </div>
   );
 }
