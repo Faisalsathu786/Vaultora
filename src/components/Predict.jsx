@@ -376,7 +376,7 @@ export default function Predict({
                 <div key={m.id} className="resolve-row">
                   <p className="resolve-q">{m.question}</p>
                   <div className="resolve-btns">
-                    {[m.outcomeA, m.outcomeB].map((opt, oi) => (
+                    {opts.map((opt, oi) => (
                       <button key={oi} className={`resolve-opt-btn ${resolveWinner[m.id] === String(oi + 1) ? "sel" : ""}`}
                         onClick={() => setResolveWinner(p => ({ ...p, [m.id]: String(oi + 1) }))}>{opt}</button>
                     ))}
@@ -455,6 +455,8 @@ export default function Predict({
           });
           if (!filtered.length) return <div className="empty">No markets here</div>;
           return filtered.map((m, i) => {
+            const multi = m.multiOutcome;
+            const opts = multi && mktOptions[m.id] ? mktOptions[m.id] : [m.outcomeA, m.outcomeB];
             const totalPool = Number(m.poolA + m.poolB);
             const pctA = totalPool > 0 ? Math.round(Number(m.poolA) * 100 / totalPool) : 50;
             const pctB = 100 - pctA;
@@ -476,9 +478,28 @@ export default function Predict({
                   {isEnded && !cancelled && <span className="mkt-ended-badge">Ended</span>}
                 </div>
                 <div className="mkt-odds">
-                  <span className="mkt-out yes">{m.outcomeA} {pctA}%</span>
-                  <div className="mkt-bar-wrap"><div className="mkt-bar-yes" style={{ width: pctA+"%" }} /></div>
-                  <span className="mkt-out no">{m.outcomeB} {pctB}%</span>
+                  {multi ? (
+                    <div className="mkt-options-grid">
+                      {opts.map((opt, oi) => {
+                        const pct = oi === 0 ? pctA : oi === 1 ? pctB : 0;
+                        return (
+                          <div key={oi} className={`mkt-opt-item ${oi === 0 ? 'green' : oi === 1 ? 'red' : 'neu'}`}>
+                            <span className="mkt-opt-name">{opt}</span>
+                            <div className="mkt-opt-bar-track">
+                              <div className="mkt-opt-bar-fill" style={{ width: Math.min(pct, 100) + '%', background: oi === 0 ? 'var(--green)' : oi === 1 ? '#f87171' : '#888' }} />
+                            </div>
+                            <span className="mkt-opt-pct">{oi < 2 ? pct + '%' : '—'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <>
+                      <span className="mkt-out yes">{m.outcomeA} {pctA}%</span>
+                      <div className="mkt-bar-wrap"><div className="mkt-bar-yes" style={{ width: pctA+"%" }} /></div>
+                      <span className="mkt-out no">{m.outcomeB} {pctB}%</span>
+                    </>
+                  )}
                 </div>
                 <div className="mkt-meta">
                   <span className="mkt-meta-pool">{(totalPool/1e6).toFixed(1)} {mktTokSym}</span>
@@ -492,39 +513,42 @@ export default function Predict({
                 {(() => {
                   const bArr = myAllBets[m.id] || [];
                   if (!bArr.length) return null;
-                  const posA = bArr.filter(b => Number(b.outcome)===1);
-                  const posB = bArr.filter(b => Number(b.outcome)===2);
-                  const tA = posA.reduce((s,b)=>s+Number(b.amount),0);
-                  const tB = posB.reduce((s,b)=>s+Number(b.amount),0);
-                  const calcR = (myPool,_tp) => myPool>0&&_tp>0? (myPool/_tp)*totalPool*0.98 : 0;
+                  // Group bets by outcome
+                  const byOutcome = {};
+                  bArr.forEach(b => { const o = Number(b.outcome); if (!byOutcome[o]) byOutcome[o] = { total: 0n, bets: [] }; byOutcome[o].total += b.amount; byOutcome[o].bets.push(b); });
+                  const calcR = (myPool, _tp) => myPool > 0 && _tp > 0 ? (myPool / _tp) * totalPool * 0.98 : 0;
                   const wO = Number(m.winningOutcome);
-                  const hasUnclaimed = bArr.some(b=>!b.claimed&&Number(b.outcome)===wO);
+                  const hasUnclaimed = bArr.some(b => !b.claimed && Number(b.outcome) === wO);
                   return (<div className="my-positions">
                     <p className="my-bets-title">Your Positions</p>
-                    {tA>0 && <div className={`pos-card yes ${resolved?(wO===1?"win":"lose"):""}`}>
-                      <div className="pos-left"><span className="pos-side yes">{m.outcomeA}</span>
-                        <span className="pos-staked">{(tA/1e6).toFixed(2)} {mktTokSym}</span></div>
-                      <div className="pos-right">{!resolved?<span className="pos-ret yes">{calcR(tA,Number(m.poolA))>0?(calcR(tA,Number(m.poolA))/1e6).toFixed(2):"--"} {mktTokSym}</span>:wO===1?<span className="pos-badge win">Won</span>:<span className="pos-badge lose">Lost</span>}</div>
-                    </div>}
-                    {tB>0 && <div className={`pos-card no ${resolved?(wO===2?"win":"lose"):""}`}>
-                      <div className="pos-left"><span className="pos-side no">{m.outcomeB}</span>
-                        <span className="pos-staked">{(tB/1e6).toFixed(2)} {mktTokSym}</span></div>
-                      <div className="pos-right">{!resolved?<span className="pos-ret no">{calcR(tB,Number(m.poolB))>0?(calcR(tB,Number(m.poolB))/1e6).toFixed(2):"--"} {mktTokSym}</span>:wO===2?<span className="pos-badge win">Won</span>:<span className="pos-badge lose">Lost</span>}</div>
-                    </div>}
-                    {resolved&&hasUnclaimed&&<button className="btn-primary" style={{marginTop:8,fontSize:".85rem",padding:"10px 18px",width:"100%"}} onClick={()=>claimWinningsOnChain(m.id)}>Claim All</button>}
+                    {Object.entries(byOutcome).map(([oIdx, grp]) => {
+                      const oi = Number(oIdx);
+                      const total = grp.total;
+                      const label = multi && opts[oi - 1] ? opts[oi - 1] : (oi === 1 ? m.outcomeA : m.outcomeB);
+                      const sideCls = multi ? 'neu' : (oi === 1 ? 'yes' : 'no');
+                      const poolAmt = oi === 1 ? Number(m.poolA) : oi === 2 ? Number(m.poolB) : totalPool > 0 ? totalPool : 1;
+                      const isWon = resolved && wO === oi;
+                      const isLost = resolved && wO !== 0 && wO !== oi;
+                      return (<div key={oi} className={`pos-card ${sideCls} ${isWon ? 'win' : ''} ${isLost ? 'lose' : ''}`}>
+                        <div className="pos-left"><span className={`pos-side ${sideCls}`}>{label}</span>
+                          <span className="pos-staked">{parseFloat(total.toString()) < 0.01 ? '<0.01' : (Number(total) / 1e6).toFixed(2)} {mktTokSym}</span></div>
+                        <div className="pos-right">{!resolved ? <span className={`pos-ret ${sideCls}`}>{calcR(total, poolAmt) > 0 ? (calcR(total, poolAmt) / 1e6).toFixed(2) : '--'} {mktTokSym}</span> : isWon ? <span className="pos-badge win">Won</span> : <span className="pos-badge lose">Lost</span>}</div>
+                      </div>);
+                    })}
+                    {resolved && hasUnclaimed && <button className="btn-primary" style={{ marginTop: 8, fontSize: '.85rem', padding: '10px 18px', width: '100%' }} onClick={() => claimWinningsOnChain(m.id)}>Claim All</button>}
                   </div>);
                 })()}
 
                 {/* Bet */}
                 {!resolved&&marketTab==="active"&&(activeMktId===m.id?<div className="mkt-bet-row">
                   <input className="num-input" style={{marginBottom:6}} type="number" placeholder={`Amount (${mktTokSym})`}
-                    value={betAmt} onChange={e=>{setBetAmt(e.target.value);fetchPayoutEstimate(m.id,1,e.target.value);fetchPayoutEstimate(m.id,2,e.target.value);}}/>
-                  <div className="bet-opts-grid">
-                    {[m.outcomeA,m.outcomeB].map((opt,oi)=><button key={oi} className={`pred-vote-btn ${oi===0?"bull":"bear"}`}
-                      onClick={async()=>{try{await placeBetOnChain(m.id,oi+1,Number(m.tokenIdx));notify(`Bet placed!`,"success");}catch(e){notify(e?.reason||"Bet failed","error");}}}>{opt}
+                    value={betAmt} onChange={e=>{setBetAmt(e.target.value);opts.forEach((_,oi)=>{fetchPayoutEstimate(m.id,oi+1,e.target.value);});}}/>
+                  <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
+                    {opts.map((opt,oi)=>{const cls=multi?('bet-opt-multi opt-'+((oi%5)+1)):(oi===0?'bull':'bear');return(<button key={oi} className={`pred-vote-btn ${cls}`}
+                      onClick={async()=>{try{await placeBetOnChain(m.id,oi+1,Number(m.tokenIdx));notify('Bet placed!','success');}catch(e){notify(e?.reason||'Bet failed','error');}}}>{opt}
                       {payoutEst[`${m.id}_${oi+1}`]&&betAmt&&<span className="payout-hint">{parseFloat(payoutEst[`${m.id}_${oi+1}`]).toFixed(2)}</span>}
-                    </button>)}
-                    <button className="pred-vote-btn" style={{flex:"0 0 40px",fontSize:".75rem"}} onClick={()=>setActiveMktId(null)}>Close</button>
+                    </button>);})}
+                    <button className="pred-vote-btn" style={{flex:'0 0 40px',fontSize:'.75rem'}} onClick={()=>setActiveMktId(null)}>Close</button>
                   </div>
                 </div>:<button className="pred-vote-btn bull" style={{width:"100%",marginTop:8}}
                   onClick={()=>{setActiveMktId(m.id);setBetAmt("");fetchBetTokenBal(Number(m.tokenIdx));}}>Place Bet</button>)}
@@ -541,7 +565,7 @@ export default function Predict({
                   :!mktBets[m.id]?.length?<p className="empty">No bets</p>
                   :<>{mktBets[m.id].map((b,bi)=><div key={bi} className="mkt-bet-row-item">
                     <span className="mkt-bet-addr"><a href={`https://testnet.arcscan.app/address/${b.user}`} target="_blank" rel="noreferrer">{trimAddr(b.user)}</a>{b.user.toLowerCase()===wallet?.toLowerCase()&&<span className="mkt-bet-you">you</span>}</span>
-                    <span className={`mkt-bet-side ${b.outcome===1?"yes":"no"}`}>{b.outcome===1?m.outcomeA:m.outcomeB}</span>
+                    <span className={`mkt-bet-side ${Number(b.outcome)===1?'yes':'no'}`}>{(multi&&opts[Number(b.outcome)-1])||(Number(b.outcome)===1?m.outcomeA:m.outcomeB)}</span>
                     <span className="mkt-bet-amt">{parseFloat(b.amount).toFixed(1)} {mktTokSym}</span>
                     <span className={`mkt-bet-status ${b.claimed?"claimed":"active"}`}>{b.claimed?"Claimed":"Active"}</span>
                   </div>)}</>}
