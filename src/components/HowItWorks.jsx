@@ -11,8 +11,6 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
         <div className="hiw-body">
           <section className="hiw-section">
             <h3>What is Vaultora</h3>
-            <p>Vaultora is a DeFi platform combining two core products under one dashboard: a <strong>savings vault</strong> for earning yield on stablecoins, and a <strong>prediction market</strong> for betting on real-world events.</p>
-            <p>No accounts, no passwords, no KYC. Connect your wallet and you are in.</p>
           </section>
 
           <section className="hiw-section hiw-gradient">
