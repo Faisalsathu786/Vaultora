@@ -498,7 +498,7 @@ export default function Predict({
                     <p className="my-bets-title">Your Positions</p>
                     {Object.entries(byOutcome).map(([oIdx, grp]) => {
                       const oi = Number(oIdx);
-                      const total = grp.total;
+                      const total = Number(grp.total);
                       const label = multi && opts[oi - 1] ? opts[oi - 1] : (oi === 1 ? m.outcomeA : m.outcomeB);
                       const sideCls = multi ? 'neu' : (oi === 1 ? 'yes' : 'no');
                       const poolAmt = oi === 1 ? Number(m.poolA) : oi === 2 ? Number(m.poolB) : totalPool > 0 ? totalPool : 1;
