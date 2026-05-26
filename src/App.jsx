@@ -312,6 +312,7 @@ export default function App() {
           )}
 
           {page === "predict" && (
+            <ErrorBoundary>
             <Predict wallet={wallet} getSigner={getSigner} notify={showToast}
               markets={markets} mkLoading={mkLoading} myBets={myBets} myAllBets={myAllBets}
               betAmt={betAmt} setBetAmt={setBetAmt}
@@ -337,6 +338,7 @@ export default function App() {
               payoutEst={payoutEst}
               softArchiveMarket={softArchiveMarket} unarchiveMarket={unarchiveMarket}
               fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees} />
+            </ErrorBoundary>
           )}
 
           {page === "history" && (
