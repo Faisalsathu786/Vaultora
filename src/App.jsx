@@ -15,6 +15,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import History from './components/History.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
 import HowItWorks from './components/HowItWorks.jsx';
+import { useSupabaseSync } from './hooks/useSupabase.js';
 import './App.css';
 
 export default function App() {
@@ -96,6 +97,10 @@ export default function App() {
           pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
           softArchiveMarket, unarchiveMarket,
   } = predData;
+
+  // Supabase sync
+  const supabaseData = useSupabaseSync(wallet, getSigner);
+  const { syncBet, syncMarketResult, syncVaultDeposit } = supabaseData;
 
   const connectWallet = async (wallet) => {
     const activeProvider = wallet?.provider || window.ethereum;
@@ -338,7 +343,9 @@ export default function App() {
               mktBets={mktBets} mktBetsLoading={mktBetsLoading}
               payoutEst={payoutEst}
               softArchiveMarket={softArchiveMarket} unarchiveMarket={unarchiveMarket}
-              fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees} />
+              fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees}
+              syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}
+              supabaseData={supabaseData} />
             </ErrorBoundary>
           )}
 
@@ -349,7 +356,12 @@ export default function App() {
               PM_TX_PAGE_SIZE={PM_TX_PAGE_SIZE}
               fetchPmTxHistory={predData.fetchPmTxHistory}
               claimWinningsOnChain={claimWinningsOnChain}
-              notify={showToast} getSigner={getSigner} />
+              notify={showToast} getSigner={getSigner}
+              supabaseNotifications={supabaseData.notifications}
+              supabaseUnreadCount={supabaseData.unreadCount}
+              supabaseFetchNotifications={supabaseData.fetchNotifications}
+              supabaseMarkRead={supabaseData.markRead}
+              supabaseMarkAllRead={supabaseData.markAllRead} />
           )}
 
           {page === "leaderboard" && (

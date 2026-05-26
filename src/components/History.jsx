@@ -4,6 +4,7 @@ import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
 export default function History({
   wallet, txHistory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
   PM_TX_PAGE_SIZE, fetchPmTxHistory, claimWinningsOnChain, notify, getSigner,
+  supabaseNotifications, supabaseUnreadCount, supabaseFetchNotifications, supabaseMarkRead, supabaseMarkAllRead,
 }) {
   return (
     <div className="pg">
@@ -83,6 +84,44 @@ export default function History({
             <button className="cm-toggle" disabled={(pmTxPage+1)*PM_TX_PAGE_SIZE>=pmTxHistory.length} onClick={()=>setPmTxPage(p=>p+1)}>Next</button>
           </div>}
         </>}
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="lb-top">
+          <p className="card-lbl">
+            Notifications
+            {supabaseUnreadCount > 0 && <span className="mkt-tab-badge claim" style={{ marginLeft: 8 }}>{supabaseUnreadCount}</span>}
+          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {supabaseUnreadCount > 0 && (
+              <button className="cm-toggle" onClick={() => supabaseMarkAllRead && supabaseMarkAllRead()}>
+                Mark All Read
+              </button>
+            )}
+            <button className="cm-toggle" onClick={() => supabaseFetchNotifications && supabaseFetchNotifications()}>
+              Refresh
+            </button>
+          </div>
+        </div>
+        {!wallet ? <p className="empty">Connect wallet to see notifications</p>
+        : !supabaseNotifications || supabaseNotifications.length === 0 ? <p className="empty">No notifications yet</p>
+        : supabaseNotifications.map(n => (
+          <div key={n.id} className={`pmhist-row ${n.read ? '' : 'pending'}`} style={{ cursor: n.read ? 'default' : 'pointer', opacity: n.read ? 0.6 : 1 }}
+            onClick={() => !n.read && supabaseMarkRead && supabaseMarkRead(n.id)}>
+            <div className="pmhist-left">
+              <span className="pmhist-badge">{n.type === 'win' ? '🎉' : n.type === 'lose' ? '😔' : '📢'}</span>
+              <div className="pmhist-detail">
+                <span className="pmhist-question">{n.title}</span>
+                <span className="pmhist-meta">{n.body}</span>
+              </div>
+            </div>
+            <div className="pmhist-right">
+              <span className="pmhist-result">{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
+              {!n.read && <span className="pmhist-badge" style={{ fontSize: '.65rem' }}>NEW</span>}
+            </div>
+          </div>
+        ))
+        }
       </div>
     </div>
   );

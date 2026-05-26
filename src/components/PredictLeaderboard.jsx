@@ -2,10 +2,31 @@ import { useEffect, useState, useRef } from 'react';
 import { trimAddr } from '../utils/format.js';
 
 export default function PredictLeaderboard({
-  wallet, lbData, lbLoading, lbError, lbTab, setLbTab, fetchLeaderboard,
+  wallet, onChainLbData, onChainLbLoading, onChainLbError, lbTab, setLbTab, fetchLeaderboard,
+  supabaseLbData,
 }) {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const fetchedRef = useRef(false);
+
+  // Primary: Supabase, fallback: on-chain
+  const useSupabase = supabaseLbData && supabaseLbData.length > 0;
+  // Normalise Supabase field names to match on-chain format
+  const normalisedSupabase = useSupabase
+    ? supabaseLbData.map(u => ({
+        address: (u.user_address || u.address || '').toLowerCase(),
+        totalBets: u.total_bets || 0,
+        totalStaked: u.total_staked || 0,
+        totalWon: u.total_won || 0,
+        wins: u.wins || 0,
+        losses: u.losses || 0,
+        winRate: u.winRate || 0,
+        profit: u.profit || 0,
+        resolvedTotal: (u.wins || 0) + (u.losses || 0),
+      }))
+    : [];
+  const rawLbData = useSupabase ? normalisedSupabase : onChainLbData;
+  const loading = useSupabase ? false : onChainLbLoading;
+  const error = useSupabase ? '' : onChainLbError;
 
   // Initial fetch only once
   useEffect(() => {
@@ -19,21 +40,21 @@ export default function PredictLeaderboard({
   useEffect(() => {
     if (!autoRefresh) return;
     const id = setInterval(() => {
-      if (!lbLoading) fetchLeaderboard();
+      if (!onChainLbLoading) fetchLeaderboard();
     }, 15000);
     return () => clearInterval(id);
   }, [autoRefresh]); // eslint-disable-line
 
   const filtered = (() => {
-    if (lbTab === 'all') return lbData;
-    if (lbTab === 'top') return lbData.filter(u => u.profit > 0);
+    if (lbTab === 'all') return rawLbData;
+    if (lbTab === 'top') return rawLbData.filter(u => u.profit > 0);
     if (lbTab === 'streak') {
-      return [...lbData].sort((a, b) => {
+      return [...rawLbData].sort((a, b) => {
         if (b.winRate !== a.winRate) return b.winRate - a.winRate;
         return b.resolvedTotal - a.resolvedTotal;
       });
     }
-    return lbData;
+    return rawLbData;
   })();
 
   const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
@@ -86,16 +107,16 @@ export default function PredictLeaderboard({
         ))}
       </div>
 
-      {lbLoading && lbData.length === 0 ? (
+      {loading && rawLbData.length === 0 ? (
         <div className="card">
           <div className="empty">
             <span className="spin" /> Loading leaderboard...
           </div>
         </div>
-      ) : lbError ? (
+      ) : error ? (
         <div className="card">
           <div className="empty" style={{ color: '#f85149' }}>
-            {lbError}
+            {error}
             <button className="btn-primary" style={{ marginTop: 12, fontSize: '.8rem' }}
               onClick={fetchLeaderboard}>Retry</button>
           </div>
