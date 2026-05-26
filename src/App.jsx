@@ -11,6 +11,7 @@ import Nav from './components/Nav.jsx';
 import Home from './components/Home.jsx';
 import Portfolio from './components/Portfolio.jsx';
 import Predict from './components/Predict.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import History from './components/History.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
 import HowItWorks from './components/HowItWorks.jsx';
