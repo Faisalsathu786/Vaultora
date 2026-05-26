@@ -488,26 +488,29 @@ export default function Predict({
                 {(() => {
                   const bArr = myAllBets[m.id] || [];
                   if (!bArr.length) return null;
-                  // Group bets by outcome
+                  // Group bets by outcome - safe arithmetic
                   const byOutcome = {};
-                  bArr.forEach(b => { const o = Number(b.outcome); if (!byOutcome[o]) byOutcome[o] = { total: 0n, bets: [] }; byOutcome[o].total += b.amount; byOutcome[o].bets.push(b); });
-                  const calcR = (myPool, _tp) => myPool > 0 && _tp > 0 ? (myPool / _tp) * totalPool * 0.98 : 0;
+                  bArr.forEach(b => { const o = Number(b.outcome); if (!byOutcome[o]) byOutcome[o] = { total: 0, bets: [] }; byOutcome[o].total += Number(b.amount||0) / 1e6; byOutcome[o].bets.push(b); });
+                  const calcR = (myPool, _tp) => { const mp=Number(myPool), tp=Number(_tp); return mp>0 && tp>0 ? (mp/tp)*totalPool*0.98 : 0; };
                   const wO = Number(m.winningOutcome);
                   const hasUnclaimed = bArr.some(b => !b.claimed && Number(b.outcome) === wO);
                   return (<div className="my-positions">
                     <p className="my-bets-title">Your Positions</p>
                     {Object.entries(byOutcome).map(([oIdx, grp]) => {
                       const oi = Number(oIdx);
-                      const total = Number(grp.total);
+                      const total = grp.total;
                       const label = multi && opts[oi - 1] ? opts[oi - 1] : (oi === 1 ? m.outcomeA : m.outcomeB);
                       const sideCls = multi ? 'neu' : (oi === 1 ? 'yes' : 'no');
-                      const poolAmt = oi === 1 ? Number(m.poolA) : oi === 2 ? Number(m.poolB) : totalPool > 0 ? totalPool : 1;
+                      const poolAmt = oi === 1 ? Number(m.poolA) : oi === 2 ? Number(m.poolB) : Number(totalPool||0) || 1;
                       const isWon = resolved && wO === oi;
                       const isLost = resolved && wO !== 0 && wO !== oi;
+                      const displayAmt = total < 0.0001 ? '<0.01' : total.toFixed(2);
+                      const retVal = calcR(total, poolAmt);
+                      const retDisplay = retVal > 0.0001 ? retVal.toFixed(2) : '--';
                       return (<div key={oi} className={`pos-card ${sideCls} ${isWon ? 'win' : ''} ${isLost ? 'lose' : ''}`}>
                         <div className="pos-left"><span className={`pos-side ${sideCls}`}>{label}</span>
-                          <span className="pos-staked">{parseFloat(total.toString()) < 0.01 ? '<0.01' : (Number(total) / 1e6).toFixed(2)} {mktTokSym}</span></div>
-                        <div className="pos-right">{!resolved ? <span className={`pos-ret ${sideCls}`}>{calcR(total, poolAmt) > 0 ? (calcR(total, poolAmt) / 1e6).toFixed(2) : '--'} {mktTokSym}</span> : isWon ? <span className="pos-badge win">Won</span> : <span className="pos-badge lose">Lost</span>}</div>
+                          <span className="pos-staked">{displayAmt} {mktTokSym}</span></div>
+                        <div className="pos-right">{!resolved ? <span className={`pos-ret ${sideCls}`}>{retDisplay} {mktTokSym}</span> : isWon ? <span className="pos-badge win">Won</span> : <span className="pos-badge lose">Lost</span>}</div>
                       </div>);
                     })}
                     {resolved && hasUnclaimed && <button className="btn-primary" style={{ marginTop: 8, fontSize: '.85rem', padding: '10px 18px', width: '100%' }} onClick={() => claimWinningsOnChain(m.id)}>Claim All</button>}
