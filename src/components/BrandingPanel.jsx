@@ -23,7 +23,7 @@ export default function BrandingPanel({ siteLogo, siteName, getSigner, PM_ADDRES
   return (
     <div className="logo-panel">
       <span className="fee-label">Site Branding (Onchain):</span>
-      <p className="emerg-note">Saved on the blockchain and visible to all users.</p>
+      <p className="owner-detail">Saved on-chain and visible to all users.</p>
       <div className="logo-input-row" style={{ marginTop: 8 }}>
         <input className="num-input" style={{ flex: 1, marginBottom: 0 }}
           placeholder="Site name (e.g. Vaultora)" value={nameVal}
@@ -39,7 +39,7 @@ export default function BrandingPanel({ siteLogo, siteName, getSigner, PM_ADDRES
           {saving ? <span className="spin" /> : "Save Onchain"}
         </button>
         {logoVal && (
-          <button className="emerg-btn" style={{ padding: "6px 10px" }}
+          <button className="owner-action-btn" style={{ padding: "6px 10px" }}
             onClick={() => { setLogoVal(""); }}>Remove Logo</button>
         )}
       </div>
