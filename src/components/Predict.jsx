@@ -430,19 +430,22 @@ export default function Predict({
           });
           if (!filtered.length) return <div className="empty">No markets here</div>;
           return filtered.map((m, i) => {
-            const multi = m.multiOutcome;
-            const opts = multi && mktOptions[m.id] ? mktOptions[m.id] : [m.outcomeA, m.outcomeB];
-            const totalPool = Number(m.poolA + m.poolB);
-            const pctA = totalPool > 0 ? Math.round(Number(m.poolA) * 100 / totalPool) : 50;
-            const pctB = 100 - pctA;
-            const resolved = Number(m.status) === 1;
-            const cancelled = Number(m.status) === 2;
-            const secsLeft = Number(m.endTime) - now;
-            const isEnded = marketTab === "ended" || isFullyClaimed(m);
-            const mktTokSym = Number(m.tokenIdx) === 0 ? "USDC" : "EURC";
+            try {
+              const multi = !!m.multiOutcome;
+              const optsRaw = multi && mktOptions[m.id] ? mktOptions[m.id] : [m.outcomeA, m.outcomeB];
+              const opts = Array.isArray(optsRaw) ? optsRaw : [m.outcomeA, m.outcomeB];
+              const totalPool = Number(m.poolA + m.poolB);
+              const pctA = totalPool > 0 ? Math.round(Number(m.poolA) * 100 / totalPool) : 50;
+              const pctB = 100 - pctA;
+              const resolved = Number(m.status) === 1;
+              const cancelled = Number(m.status) === 2;
+              const secsLeft = Number(m.endTime) - now;
+              const isEnded = marketTab === "ended" || isFullyClaimed(m);
+              const mktTokSym = Number(m.tokenIdx) === 0 ? "USDC" : "EURC";
+              const mId = m.id?.toString && m.id.toString();
             return (
               <div key={i} className={`mkt-card${isEnded ? " ended-card" : ""}`}>
-                {mktImages[m.id] && (
+                  {mktImages[m.id] && (
                   <div className="mkt-img-wrap">
                     <img src={mktImages[m.id]} alt={m.question} className="mkt-img"
                       onError={e => e.target.parentElement.style.display="none"} />
@@ -557,6 +560,7 @@ export default function Predict({
                 </div>}
               </div>
             );
+            } catch (er) { return <div className="card" style={{padding:12,margin:8,border:'1px solid #f85149'}}><p style={{color:'#f85149',fontSize:'.75rem'}}>⚠ Error rendering market #{m?.id||'?'}: {er?.message||'unknown'}</p></div>; }
           });
         })()}
       </div>
