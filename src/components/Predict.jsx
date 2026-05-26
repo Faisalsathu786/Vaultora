@@ -351,7 +351,7 @@ export default function Predict({
                 <div key={m.id} className="resolve-row">
                   <p className="resolve-q">{m.question}</p>
                   <div className="resolve-btns">
-                    {opts.map((opt, oi) => (
+                    {(m.multiOutcome && mktOptions[m.id] ? mktOptions[m.id] : [m.outcomeA, m.outcomeB]).map((opt, oi) => (
                       <button key={oi} className={`resolve-opt-btn ${resolveWinner[m.id] === String(oi + 1) ? "sel" : ""}`}
                         onClick={() => setResolveWinner(p => ({ ...p, [m.id]: String(oi + 1) }))}>{opt}</button>
                     ))}
