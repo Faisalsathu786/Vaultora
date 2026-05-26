@@ -1375,20 +1375,20 @@ body {
   border-radius: 6px;
 }
 
-/* ── EMERGENCY PANEL ── */
-.emerg-panel {
+/* ── OWNER ACTION PANEL ── */
+.owner-panel {
   background: rgba(248,113,113,.05);
   border: 1px solid rgba(248,113,113,.2);
   border-radius: var(--r2);
   padding: 12px 14px;
   margin-top: 12px;
 }
-.emerg-note {
+.owner-detail {
   font-size: .73rem;
   color: var(--dim);
   margin: 4px 0 10px;
 }
-.emerg-btn {
+.owner-action-btn {
   padding: 7px 14px;
   border-radius: var(--r2);
   border: 1px solid rgba(248,113,113,.3);
@@ -1399,8 +1399,8 @@ body {
   cursor: pointer;
   transition: background .15s;
 }
-.emerg-btn:hover:not(:disabled) { background: rgba(248,113,113,.18); }
-.emerg-btn:disabled { opacity: .4; cursor: not-allowed; }
+.owner-action-btn:hover:not(:disabled) { background: rgba(248,113,113,.18); }
+.owner-action-btn:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ── RESOLVE PANEL ── */
 .resolve-panel {

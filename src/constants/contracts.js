@@ -65,7 +65,6 @@ export const PM_ABI = [
   "function setPaused(bool paused) external",
   "function withdrawFees(address token) external",
   "function getPendingFees(address token) view returns (uint256)",
-  "function emergencyWithdraw(address tokenAddr) external",
   "function transferOwnership(address newOwner) external",
   "function globalMinBet() view returns (uint256)",
   "function globalFeeBps() view returns (uint16)",

@@ -50,7 +50,7 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
                   <td><strong>Flexible</strong> <span className="hiw-tag hiw-tag-f">No Lock</span></td>
                   <td>Anytime</td>
                   <td className="hiw-apy">5%</td>
-                  <td>Emergency funds</td>
+                  <td>Short-term cash</td>
                 </tr>
                 <tr>
                   <td><strong>30-Day</strong> <span className="hiw-tag hiw-tag-30">Monthly</span></td>

@@ -36,8 +36,6 @@ export default function Predict({
   const [editEndTime, setEditEndTime] = useState({});
   const [endTimeSaving, setEndTimeSaving] = useState(null);
   const [cancelSaving, setCancelSaving] = useState(null);
-  const [emergWd, setEmergWd] = useState(false);
-
   // Prediction leaderboard
   const { lbData, lbLoading, lbError, lbTab, setLbTab, fetchLeaderboard } =
     usePredictionLeaderboard(wallet, isOwner);
@@ -52,18 +50,6 @@ export default function Predict({
       fetchPendingFees();
     } catch (e) { notify(e?.reason || "Withdraw failed", "error"); }
     finally { setFeeWithdrawing(false); }
-  };
-
-  const emergencyWithdrawOnChain = async (tokenAddr, tokenName) => {
-    try {
-      setEmergWd(true);
-      const signer = await getSigner();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      await (await pm.emergencyWithdraw(tokenAddr)).wait();
-      notify(`Emergency withdraw done. ${tokenName} sent to owner.`, "success");
-      fetchPendingFees();
-    } catch (e) { notify(e?.reason || "Withdraw failed", "error"); }
-    finally { setEmergWd(false); }
   };
 
   const saveGlobalConfig = async () => {
@@ -301,21 +287,10 @@ export default function Predict({
           </div>
           <div className="owner-section">
             <span className="fee-label">Status:</span>
-            <p className="emerg-note"><b style={{ color: isPaused ? "#f87171" : "var(--green)" }}>{isPaused ? "Paused" : "Active"}</b></p>
-            <button className={isPaused ? "resolve-confirm-btn" : "emerg-btn"} disabled={pauseSaving} onClick={togglePause}>
+            <p className="owner-detail"><b style={{ color: isPaused ? "#f87171" : "var(--green)" }}>{isPaused ? "Paused" : "Active"}</b></p>
+            <button className={isPaused ? "resolve-confirm-btn" : "owner-action-btn"} disabled={pauseSaving} onClick={togglePause}>
               {pauseSaving ? <span className="spin" /> : isPaused ? "Unpause" : "Pause"}
             </button>
-          </div>
-          <div className="emerg-panel">
-            <span className="fee-label">Emergency Withdraw:</span>
-            <div className="fee-btns">
-              <button className="emerg-btn" disabled={emergWd} onClick={() => emergencyWithdrawOnChain(USDC_ADDRESS, "USDC")}>
-                {emergWd ? <span className="spin" /> : "USDC"}
-              </button>
-              <button className="emerg-btn" disabled={emergWd} onClick={() => emergencyWithdrawOnChain(EURC_ADDRESS, "EURC")}>
-                {emergWd ? <span className="spin" /> : "EURC"}
-              </button>
-            </div>
           </div>
           <div className="owner-section">
             <span className="fee-label">Add Token:</span>
@@ -350,7 +325,7 @@ export default function Predict({
                         {endTimeSaving === m.id ? <span className="spin" /> : "Update"}
                       </button>
                     </div>
-                    <button className="emerg-btn" style={{ fontSize: ".73rem", padding: "5px 10px" }}
+                    <button className="owner-action-btn" style={{ fontSize: ".73rem", padding: "5px 10px" }}
                       disabled={cancelSaving === m.id} onClick={() => cancelMarketOnChain(m.id)}>
                       {cancelSaving === m.id ? <span className="spin" /> : "Cancel"}
                     </button>
@@ -359,12 +334,12 @@ export default function Predict({
               ))}
             </div>
           )}
-          <div className="emerg-panel" style={{ marginTop: 12 }}>
+          <div className="owner-panel" style={{ marginTop: 12 }}>
             <span className="fee-label">Transfer Ownership:</span>
-            <p className="emerg-note">New owner must call acceptOwnership(). Irreversible.</p>
+            <p className="owner-detail">New owner must call acceptOwnership(). Irreversible.</p>
             <input className="num-input" placeholder="New owner address" value={xferOwner}
               onChange={e => setXferOwner(e.target.value)} />
-            <button className="emerg-btn" style={{ marginTop: 8 }} disabled={xferSaving || !xferOwner.trim()}
+            <button className="owner-action-btn" style={{ marginTop: 8 }} disabled={xferSaving || !xferOwner.trim()}
               onClick={transferOwnershipOnChain}>
               {xferSaving ? <span className="spin" /> : "Transfer"}
             </button>
