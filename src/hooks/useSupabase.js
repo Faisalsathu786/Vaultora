@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from './supabase'
+import { supabase } from '../lib/supabase'
 
 /**
  * Hook to sync on-chain prediction data to Supabase and
@@ -95,16 +95,17 @@ export function useSupabaseSync(wallet, getSigner) {
   // ── Sync a bet to Supabase ──
   const syncBet = useCallback(async (marketId, userAddress, outcome, amount, betIndex, txHash) => {
     try {
+      const bi = betIndex != null ? Number(betIndex) : Date.now()
       // Upsert bet
       const { error: betErr } = await supabase.from('bets').upsert({
         market_id: Number(marketId),
         user_address: userAddress.toLowerCase(),
         amount: Number(amount),
         outcome: Number(outcome),
-        bet_index: Number(betIndex),
+        bet_index: bi,
         tx_hash: txHash || null,
         claimed: false,
-      }, { onConflict: 'market_id,bet_index' })
+      }, { onConflict: 'market_id,user_address,bet_index' })
 
       if (betErr) throw betErr
 
@@ -196,6 +197,27 @@ export function useSupabaseSync(wallet, getSigner) {
     }
   }, [])
 
+  // ── Sync vault deposit to Supabase ──
+  const syncVaultDeposit = useCallback(async (userAddress, amount, token, tier, depositTime, lockDur, apy, txHash) => {
+    try {
+      const { error } = await supabase.from('vault_deposits').upsert({
+        user_address: userAddress.toLowerCase(),
+        amount: Number(amount),
+        token,
+        tier: Number(tier),
+        deposit_time: depositTime,
+        lock_dur: Number(lockDur),
+        apy: Number(apy),
+        tx_hash: txHash || null,
+      })
+      if (error) throw error
+      return true
+    } catch (e) {
+      console.error('Sync vault deposit error:', e)
+      return false
+    }
+  }, [])
+
   // ── Listen for real-time changes ──
   useEffect(() => {
     if (channelRef.current) {
@@ -251,5 +273,6 @@ export function useSupabaseSync(wallet, getSigner) {
     fetchNotifications,
     syncBet,
     syncMarketResult,
+    syncVaultDeposit,
   }
 }
