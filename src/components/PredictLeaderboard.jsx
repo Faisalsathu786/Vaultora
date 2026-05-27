@@ -64,8 +64,8 @@ export default function PredictLeaderboard({
           >
             {autoRefresh ? 'Live' : 'Paused'}
           </button>
-          <button className="lb-refresh-btn" onClick={fetchLeaderboard} disabled={lbLoading}>
-            {lbLoading ? <span className="spin" /> : 'Refresh'}
+          <button className="lb-refresh-btn" onClick={fetchLeaderboard} disabled={loading}>
+            {loading ? <span className="spin" /> : 'Refresh'}
           </button>
         </div>
       </div>
