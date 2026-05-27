@@ -7,7 +7,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials missing. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env')
 }
 
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
-)
+const hasCreds = !!supabaseUrl && !!supabaseAnonKey
+
+export const supabase = hasCreds
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null

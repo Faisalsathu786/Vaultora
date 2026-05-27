@@ -16,6 +16,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Fetch leaderboard from Supabase ──
   const fetchLeaderboard = useCallback(async () => {
+    if (!supabase) return
     setLbLoading(true)
     try {
       const { data, error } = await supabase
@@ -48,7 +49,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Fetch notifications for current user ──
   const fetchNotifications = useCallback(async () => {
-    if (!wallet) return
+    if (!wallet || !supabase) return
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -67,6 +68,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Mark notification as read ──
   const markRead = useCallback(async (id) => {
+    if (!supabase) return
     try {
       await supabase.from('notifications').update({ read: true }).eq('id', id)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
@@ -78,7 +80,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Mark all as read ──
   const markAllRead = useCallback(async () => {
-    if (!wallet) return
+    if (!wallet || !supabase) return
     try {
       await supabase.from('notifications')
         .update({ read: true })
@@ -94,6 +96,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Sync a bet to Supabase ──
   const syncBet = useCallback(async (marketId, userAddress, outcome, amount, betIndex, txHash) => {
+    if (!supabase) return false
     try {
       const bi = betIndex != null ? Number(betIndex) : Date.now()
       // Upsert bet
@@ -144,6 +147,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Sync market resolution ──
   const syncMarketResult = useCallback(async (marketId, winningOutcome) => {
+    if (!supabase) return
     try {
       // Update market in supabase
       await supabase.from('markets').update({
@@ -199,6 +203,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Sync vault deposit to Supabase ──
   const syncVaultDeposit = useCallback(async (userAddress, amount, token, tier, depositTime, lockDur, apy, txHash) => {
+    if (!supabase) return false
     try {
       const { error } = await supabase.from('vault_deposits').upsert({
         user_address: userAddress.toLowerCase(),
@@ -220,6 +225,7 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Listen for real-time changes ──
   useEffect(() => {
+    if (!supabase) return
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current)
     }
