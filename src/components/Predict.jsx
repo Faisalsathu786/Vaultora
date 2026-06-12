@@ -138,11 +138,15 @@ export default function Predict({
       setResolving(true);
       const signer = await getSigner();
       const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      await (await pm.resolveMarket(marketId, Number(winningOutcome))).wait();
+      const tx = await pm.resolveMarket(marketId, Number(winningOutcome));
+      await tx.wait();
       notify("Market resolved.", "success");
       setResolveWinner(p => ({ ...p, [marketId]: "" }));
       await fetchMarkets(signer);
-    } catch (e) { notify(e?.reason || "Resolve failed", "error"); }
+    } catch (e) {
+      const errMsg = e?.reason || e?.data?.message || e?.message?.slice(0, 100) || "Resolve failed";
+      notify(errMsg, "error");
+    }
     finally { setResolving(false); }
   };
 
