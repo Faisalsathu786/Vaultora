@@ -1,15 +1,30 @@
+import { useState } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
 
 export default function History({
   wallet, txHistory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
-  PM_TX_PAGE_SIZE, fetchPmTxHistory, claimWinningsOnChain, notify, getSigner,
+  PM_TX_PAGE_SIZE, fetchPmTxHistory, fetchOnChainHistory, claimWinningsOnChain, notify, getSigner,
   supabaseNotifications, supabaseUnreadCount, supabaseFetchNotifications, supabaseMarkRead, supabaseMarkAllRead,
 }) {
+  const [txRefreshing, setTxRefreshing] = useState(false);
   return (
     <div className="pg">
       <div className="card">
-        <p className="card-lbl">Vault Transactions</p>
+        <div className="lb-top">
+          <p className="card-lbl">Vault Transactions</p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {txRefreshing && <span className="spin" />}
+            <button className="cm-toggle" onClick={async () => {
+              if (!wallet || txRefreshing) return;
+              setTxRefreshing(true);
+              try { if (fetchOnChainHistory) await fetchOnChainHistory(wallet); } catch {}
+              setTxRefreshing(false);
+            }} disabled={txRefreshing}>
+              Refresh
+            </button>
+          </div>
+        </div>
         {txHistory.length === 0
           ? <p className="empty">No vault transactions yet</p>
           : txHistory.map(tx => (

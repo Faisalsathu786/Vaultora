@@ -361,7 +361,7 @@ export default function App() {
           )}
 
           {page === "history" && (
-            <History wallet={wallet} txHistory={txHistory}
+            <History wallet={wallet} txHistory={txHistory} fetchOnChainHistory={fetchOnChainHistory}
               pmTxHistory={pmTxHistory} pmTxLoading={pmTxLoading}
               pmTxPage={pmTxPage} setPmTxPage={setPmTxPage}
               PM_TX_PAGE_SIZE={PM_TX_PAGE_SIZE}
