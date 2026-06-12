@@ -526,7 +526,7 @@ export default function Predict({
                   <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
                     {opts.map((opt,oi)=>{const cls=multi?('bet-opt-multi opt-'+((oi%5)+1)):(oi===0?'bull':'bear');return(<button key={oi} className={`pred-vote-btn ${cls}`}
                       onClick={async()=>{try{const ok=await placeBetOnChain(m.id,oi+1,Number(m.tokenIdx));if(ok&&syncBet){syncBet(m.id,wallet,oi+1,betAmt);}notify('Bet placed!','success');}catch(e){notify(e?.reason||'Bet failed','error');}}}>{opt}
-                      {payoutEst[`${m.id}_${oi+1}`]&&betAmt&&<span className="payout-hint">{parseFloat(payoutEst[`${m.id}_${oi+1}`]).toFixed(2)}</span>}
+                      {!multi && payoutEst[`${m.id}_${oi+1}`]&&betAmt&&<span className="payout-hint">{parseFloat(payoutEst[`${m.id}_${oi+1}`]).toFixed(2)}</span>}
                     </button>);})}
                     <button className="pred-vote-btn" style={{flex:'0 0 40px',fontSize:'.75rem'}} onClick={()=>setActiveMktId(null)}>Close</button>
                   </div>
