@@ -92,7 +92,7 @@ export default function App() {
           fetchMarketBets, fetchContractConfig, fetchPendingFees,
           showCreateForm, setShowCreateForm, newMkt, setNewMkt,
           creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
-          isPaused, setIsPaused, globalCfg, setGlobalCfg, resolving, resolveWinner, setResolveWinner,
+          isPaused, setIsPaused, globalCfg, setGlobalCfg, resolving, setResolving, resolveWinner, setResolveWinner,
           mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading, payoutEst,
           marketCategory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
           softArchiveMarket, unarchiveMarket,
@@ -338,7 +338,7 @@ export default function App() {
               pendingFees={pendingFees} feeWithdrawing={feeWithdrawing}
               setFeeWithdrawing={setFeeWithdrawing}
               isPaused={isPaused} setIsPaused={setIsPaused} globalCfg={globalCfg} setGlobalCfg={setGlobalCfg}
-              resolving={resolving} resolveWinner={resolveWinner} setResolveWinner={setResolveWinner}
+              resolving={resolving} setResolving={setResolving} resolveWinner={resolveWinner} setResolveWinner={setResolveWinner}
               mktBetsTab={mktBetsTab} setMktBetsTab={setMktBetsTab}
               mktBets={mktBets} mktBetsLoading={mktBetsLoading}
               payoutEst={payoutEst}

@@ -20,7 +20,7 @@ export default function Predict({
   fetchMarketBets, fetchContractConfig, fetchPendingFees,
   showCreateForm, setShowCreateForm, newMkt, setNewMkt,
   creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
-  isPaused, globalCfg, resolving, resolveWinner, setResolveWinner,
+  isPaused, globalCfg, resolving, setResolving, resolveWinner, setResolveWinner,
   mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading, payoutEst,
   softArchiveMarket, unarchiveMarket,
   setGlobalCfg, setIsPaused,

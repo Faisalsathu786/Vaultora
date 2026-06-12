@@ -372,7 +372,7 @@ export function usePredictionData(wallet, getSigner) {
     newMkt, setNewMkt, mktImages, mktOptions, marketCategory,
     siteLogo, setSiteLogo, siteName, setSiteName, isOwner,
     creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
-    isPaused, globalCfg, resolving, resolveWinner, setResolveWinner,
+    isPaused, globalCfg, resolving, setResolving, resolveWinner, setResolveWinner,
     pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
     mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading,
     payoutEst, now, betTokenBal, marketTab, setMarketTab,
