@@ -77,7 +77,7 @@ export default function App() {
   const { deposits, interests, stats, leaderboard, walletBal,
           isLoading, isSuccess, statusMsg, setStatusMsg,
           txHistory, setTxHistory,
-          fetchChainData, handleDeposit: vaultDeposit, handleWithdraw,
+          fetchChainData, handleDeposit: vaultDeposit, handleWithdraw: vaultWithdraw,
           refreshBalance, fetchOnChainHistory,
   } = vaultData;
 
@@ -100,7 +100,7 @@ export default function App() {
 
   // Supabase sync
   const supabaseData = useSupabaseSync(wallet, getSigner);
-  const { syncBet, syncMarketResult, syncVaultDeposit } = supabaseData;
+  const { syncBet, syncMarketResult, syncVaultDeposit, syncVaultWithdraw } = supabaseData;
 
   const connectWallet = async (wallet) => {
     const activeProvider = wallet?.provider || window.ethereum;
@@ -318,13 +318,27 @@ export default function App() {
                   ).catch(e => console.warn('Vault sync err:', e));
                 }
               }}
-              handleWithdraw={handleWithdraw}
+              handleWithdraw={async (idx) => {
+                const dep = deposits[idx];
+                if (!dep) return;
+                const ok = await vaultWithdraw(idx);
+                if (ok && syncVaultWithdraw && dep.depositTime) {
+                  syncVaultWithdraw(wallet, Number(dep.depositTime)).catch(e => console.warn('Withdraw sync err:', e));
+                }
+              }}
               refreshBalance={refreshBalance} />
           )}
 
           {page === "portfolio" && (
             <Portfolio deposits={deposits} byToken={byToken} totalValue={totalValue}
-              interests={interests} isLoading={isLoading} handleWithdraw={handleWithdraw} />
+              interests={interests} isLoading={isLoading} handleWithdraw={async (idx) => {
+                const dep = deposits[idx];
+                if (!dep) return;
+                const ok = await vaultWithdraw(idx);
+                if (ok && syncVaultWithdraw && dep.depositTime) {
+                  syncVaultWithdraw(wallet, Number(dep.depositTime)).catch(e => console.warn('Withdraw sync err:', e));
+                }
+              }} />
           )}
 
           {page === "predict" && (
@@ -368,6 +382,7 @@ export default function App() {
               fetchPmTxHistory={predData.fetchPmTxHistory}
               claimWinningsOnChain={claimWinningsOnChain}
               notify={showToast} getSigner={getSigner}
+              supabaseData={supabaseData}
               supabaseNotifications={supabaseData.notifications}
               supabaseUnreadCount={supabaseData.unreadCount}
               supabaseFetchNotifications={supabaseData.fetchNotifications}

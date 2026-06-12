@@ -211,8 +211,8 @@ export function useSupabaseSync(wallet, getSigner) {
         token,
         tier: Number(tier),
         deposit_time: depositTime,
-        lock_dur: Number(lockDur),
-        apy: Number(apy),
+        lock_duration: Number(lockDur),
+        apy_rate: Number(apy),
         tx_hash: txHash || null,
       })
       if (error) throw error
@@ -280,5 +280,6 @@ export function useSupabaseSync(wallet, getSigner) {
     syncBet,
     syncMarketResult,
     syncVaultDeposit,
+    syncVaultWithdraw,
   }
 }

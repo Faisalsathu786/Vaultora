@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
 
@@ -6,8 +6,42 @@ export default function History({
   wallet, txHistory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
   PM_TX_PAGE_SIZE, fetchPmTxHistory, fetchOnChainHistory, claimWinningsOnChain, notify, getSigner,
   supabaseNotifications, supabaseUnreadCount, supabaseFetchNotifications, supabaseMarkRead, supabaseMarkAllRead,
+  supabaseData,
 }) {
   const [txRefreshing, setTxRefreshing] = useState(false);
+  const [supabaseTxs, setSupabaseTxs] = useState([]);
+
+  // Merge local + Supabase vault deposits for cross-device history
+  const mergedVaultTxs = supabaseTxs.length > 0
+    ? (() => {
+        const existingIds = new Set(txHistory.map(t => String(t.id || '')));
+        const sbTxs = supabaseTxs
+          .filter(st => !existingIds.has(String(st.tx_hash || '')))
+          .map(st => ({
+            type: st.active === false ? 'Withdraw' : 'Deposit',
+            amount: String(st.amount || '—'),
+            token: ['USDC','EURC'][st.token] || 'USDC',
+            time: new Date(Number(st.deposit_time) * 1000).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+            id: st.tx_hash || 'sb_' + st.id,
+          }));
+        return [...sbTxs, ...txHistory];
+      })()
+    : txHistory;
+
+  // Load vault deposits from Supabase for cross-device history
+  useEffect(() => {
+    if (!wallet || !supabaseData?.supabase) return;
+    supabaseData.supabase
+      .from('vault_deposits')
+      .select('*')
+      .eq('user_address', wallet.toLowerCase())
+      .order('deposit_time', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (!error && data) setSupabaseTxs(data);
+      })
+      .catch(() => {});
+  }, [wallet, supabaseData]);
   return (
     <div className="pg">
       <div className="card">
@@ -25,9 +59,9 @@ export default function History({
             </button>
           </div>
         </div>
-        {txHistory.length === 0
+        {mergedVaultTxs.length === 0
           ? <p className="empty">No vault transactions yet</p>
-          : txHistory.map(tx => (
+          : mergedVaultTxs.map(tx => (
             <div key={tx.id} className="tx-row">
               <div className={`tx-icon ${tx.type === "Deposit" ? "in" : "out"}`}>
                 {tx.type === "Deposit" ? "D" : "W"}
