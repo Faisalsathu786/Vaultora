@@ -13,7 +13,7 @@ export default function Header({ wallet, siteLogo, siteName, isDark, disconnectW
         <span className="net-badge">Arc Testnet</span>
         <a className="faucet-btn" href="https://faucet.circle.com/" target="_blank" rel="noreferrer">Faucet</a>
         <button className="theme-btn" onClick={() => setIsDark(v => !v)} aria-label="Toggle theme">
-          {isDark ? "S" : "M"}
+          {isDark ? "☾" : "☀"}
         </button>
         {wallet && (
           <div className="addr-chip">

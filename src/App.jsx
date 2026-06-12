@@ -94,7 +94,7 @@ export default function App() {
           creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
           isPaused, setIsPaused, globalCfg, setGlobalCfg, resolving, resolveWinner, setResolveWinner,
           mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading, payoutEst,
-          pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
+          marketCategory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
           softArchiveMarket, unarchiveMarket,
   } = predData;
 
@@ -342,6 +342,7 @@ export default function App() {
               mktBetsTab={mktBetsTab} setMktBetsTab={setMktBetsTab}
               mktBets={mktBets} mktBetsLoading={mktBetsLoading}
               payoutEst={payoutEst}
+              marketCategory={marketCategory}
               softArchiveMarket={softArchiveMarket} unarchiveMarket={unarchiveMarket}
               fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees}
               syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}

@@ -270,12 +270,15 @@ export function usePredictionData(wallet, getSigner) {
               pm.marketImages(m.id).catch(() => ""),
               pm.getMarketOptions(m.id).catch(() => []),
             ]);
+            const cat = await pm.marketCategory(m.id).catch(() => "");
             if (img) imgMap[m.id.toString()] = img;
             if (opts?.length > 0) optMap[m.id.toString()] = opts;
+            if (cat) catMap[m.id.toString()] = cat;
           } catch {}
         }));
         if (Object.keys(imgMap).length > 0) setMktImages(p => ({ ...p, ...imgMap }));
         if (Object.keys(optMap).length > 0) setMktOptions(p => ({ ...p, ...optMap }));
+        if (Object.keys(catMap).length > 0) setMarketCategory(p => ({ ...p, ...catMap }));
       } catch {}
     })();
   }, [markets]);
