@@ -25,7 +25,7 @@ export default function Predict({
   softArchiveMarket, unarchiveMarket,
   setGlobalCfg, setIsPaused,
   hiddenIds, setHiddenIds,
-  syncBet, syncVaultDeposit, supabaseData,
+  syncBet, syncVaultDeposit, syncMarketResult, supabaseData,
 }) {
   const [cfgSaving, setCfgSaving] = useState(false);
   const [pauseSaving, setPauseSaving] = useState(false);

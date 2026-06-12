@@ -307,7 +307,17 @@ export default function App() {
               tierIdx={tierIdx} setTierIdx={setTierIdx}
               amount={amount} setAmount={setAmount}
               walletBal={walletBal}
-              handleDeposit={() => vaultDeposit(amount, tokenIdx, tierIdx)}
+              handleDeposit={async () => {
+                const ok = await vaultDeposit(amount, tokenIdx, tierIdx);
+                if (ok && syncVaultDeposit) {
+                  syncVaultDeposit(
+                    wallet, amount, tokenIdx, tierIdx,
+                    Math.floor(Date.now() / 1000),
+                    TIERS[tierIdx].days,
+                    parseInt(TIERS[tierIdx].apy.replace('%','')) * 100
+                  ).catch(e => console.warn('Vault sync err:', e));
+                }
+              }}
               handleWithdraw={handleWithdraw}
               refreshBalance={refreshBalance} />
           )}
@@ -345,7 +355,7 @@ export default function App() {
               marketCategory={marketCategory}
               softArchiveMarket={softArchiveMarket} unarchiveMarket={unarchiveMarket}
               fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees}
-              syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}
+              syncBet={syncBet} syncVaultDeposit={syncVaultDeposit} syncMarketResult={syncMarketResult}
               supabaseData={supabaseData} />
             </ErrorBoundary>
           )}
