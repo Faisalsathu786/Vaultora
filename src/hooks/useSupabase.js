@@ -223,6 +223,22 @@ export function useSupabaseSync(wallet, getSigner) {
     }
   }, [])
 
+  const syncVaultWithdraw = useCallback(async (userAddress, depositTime) => {
+    if (!supabase) return false
+    try {
+      const { error } = await supabase
+        .from('vault_deposits')
+        .update({ active: false })
+        .eq('user_address', userAddress.toLowerCase())
+        .eq('deposit_time', Number(depositTime))
+      if (error) throw error
+      return true
+    } catch (e) {
+      console.error('Sync vault withdraw error:', e)
+      return false
+    }
+  }, [])
+
   // ── Listen for real-time changes ──
   useEffect(() => {
     if (!supabase) return
