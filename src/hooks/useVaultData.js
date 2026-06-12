@@ -10,7 +10,15 @@ export function useVaultData(wallet, getSigner) {
   const [interests, setInterests] = useState([]);
   const [stats, setStats] = useState({ tvl: "0", users: "0" });
   const [leaderboard, setLeaderboard] = useState([]);
-  const [txHistory, setTxHistory] = useState([]);
+
+  // Load cached tx history from localStorage
+  const [txHistory, setTxHistory] = useState(() => {
+    try {
+      if (!wallet) return [];
+      const saved = localStorage.getItem(STORAGE_PREFIX + wallet.toLowerCase());
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [walletBal, setWalletBal] = useState("0");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -125,7 +133,20 @@ export function useVaultData(wallet, getSigner) {
       const myTxs = items.filter(
         tx => tx?.from?.hash?.toLowerCase() === address.toLowerCase()
       );
-      if (myTxs.length === 0) return;
+      if (myTxs.length === 0) {
+        // No on-chain data — try loading from localStorage cache
+        try {
+          const saved = localStorage.getItem(STORAGE_PREFIX + address.toLowerCase());
+          if (saved) {
+            const cached = JSON.parse(saved);
+            if (cached.length > 0) {
+              setTxHistory(cached);
+              return;
+            }
+          }
+        } catch {}
+        return;
+      }
       const onChainHistory = myTxs.map(tx => {
         const method = tx.method || "";
         const isDeposit = method === "0xb881b357" || method?.toLowerCase().includes("deposit");
