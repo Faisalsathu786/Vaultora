@@ -281,6 +281,7 @@ export default function App() {
   const totalValue = byToken.reduce((s, t) => s + t.total, 0);
 
   return (
+    <ErrorBoundary>
     <div className="app">
       <Toast toast={toast} />
       <Header wallet={wallet} siteLogo={siteLogo} siteName={siteName}
@@ -403,5 +404,6 @@ export default function App() {
 
       <HowItWorks isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} isDark={isDark} />
     </div>
+    </ErrorBoundary>
   );
 }
