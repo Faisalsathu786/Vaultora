@@ -263,12 +263,12 @@ export function useSupabaseSync(wallet, getSigner) {
   // Refresh timer
   useEffect(() => {
     if (!wallet) return
-    const id = setInterval(fetchLeaderboard, 15000)
-    return () => clearInterval(id)
+    // Leaderboard uses real-time subscription now
   }, [wallet, fetchLeaderboard])
 
   return {
     isReady,
+    supabase,
     lbData,
     lbLoading,
     fetchLeaderboard,

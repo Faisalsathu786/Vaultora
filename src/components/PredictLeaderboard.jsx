@@ -2,59 +2,85 @@ import { useEffect, useState, useRef } from 'react';
 import { trimAddr } from '../utils/format.js';
 
 export default function PredictLeaderboard({
-  wallet, onChainLbData, onChainLbLoading, onChainLbError, lbTab, setLbTab, fetchLeaderboard,
-  supabaseLbData,
+  wallet, lbTab, setLbTab, supabaseLbData, supabase,
 }) {
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [localLb, setLocalLb] = useState([]);
+  const channelRef = useRef(null);
   const fetchedRef = useRef(false);
 
-  // Primary: Supabase, fallback: on-chain
-  const useSupabase = supabaseLbData && supabaseLbData.length > 0;
-  // Normalise Supabase field names to match on-chain format
-  const normalisedSupabase = useSupabase
-    ? supabaseLbData.map(u => ({
-        address: (u.user_address || u.address || '').toLowerCase(),
-        totalBets: u.total_bets || 0,
-        totalStaked: u.total_staked || 0,
-        totalWon: u.total_won || 0,
-        wins: u.wins || 0,
-        losses: u.losses || 0,
-        winRate: u.winRate || 0,
-        profit: u.profit || 0,
-        resolvedTotal: (u.wins || 0) + (u.losses || 0),
-      }))
-    : [];
-  const rawLbData = useSupabase ? normalisedSupabase : onChainLbData;
-  const loading = useSupabase ? false : onChainLbLoading;
-  const error = useSupabase ? '' : onChainLbError;
+  // Use supabase data; subscribe to real-time changes
+  const rawLbData = supabaseLbData.length > 0 ? supabaseLbData : localLb;
 
-  // Initial fetch only once
+  // Normalise Supabase field names
+  const normalised = rawLbData.map(u => ({
+    address: (u.user_address || u.address || '').toLowerCase(),
+    totalBets: u.total_bets || u.totalBets || 0,
+    totalStaked: u.total_staked || u.totalStaked || 0,
+    totalWon: u.total_won || u.totalWon || 0,
+    wins: u.wins || 0,
+    losses: u.losses || 0,
+    winRate: u.win_rate || u.winRate || 0,
+    profit: u.profit || 0,
+    resolvedTotal: (u.wins || 0) + (u.losses || 0),
+  }));
+
+  // Sort: profit desc → totalWon desc → winRate desc
+  const sorted = [...normalised].sort((a, b) => {
+    if (b.profit !== a.profit) return b.profit - a.profit;
+    if (b.totalWon !== a.totalWon) return b.totalWon - a.totalWon;
+    return b.winRate - a.winRate;
+  });
+
+  // Initial fetch from Supabase if needed
   useEffect(() => {
-    if (!fetchedRef.current) {
-      fetchedRef.current = true;
-      fetchLeaderboard();
-    }
-  }, []); // eslint-disable-line
+    if (fetchedRef.current || !supabase || supabaseLbData.length > 0) return;
+    fetchedRef.current = true;
+    supabase.from('user_stats')
+      .select('*')
+      .gt('total_bets', 0)
+      .order('profit', { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (!error && data) setLocalLb(data);
+      });
+  }, [supabase]); // eslint-disable-line
 
-  // Auto refresh — no interval if loading
+  // Real-time subscription: user_stats changes = leaderboard update
   useEffect(() => {
-    if (!autoRefresh) return;
-    const id = setInterval(() => {
-      if (!onChainLbLoading) fetchLeaderboard();
-    }, 15000);
-    return () => clearInterval(id);
-  }, [autoRefresh]); // eslint-disable-line
+    if (!supabase) return;
+    const channel = supabase
+      .channel('lb-realtime')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'user_stats' },
+        async () => {
+          const { data, error } = await supabase
+            .from('user_stats')
+            .select('*')
+            .gt('total_bets', 0)
+            .order('profit', { ascending: false })
+            .limit(100);
+          if (!error && data) setLocalLb(JSON.parse(JSON.stringify(data))); // force re-render via new ref
+        }
+      )
+      .subscribe();
 
+    channelRef.current = channel;
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
+  // Filter by tab
   const filtered = (() => {
-    if (lbTab === 'all') return rawLbData;
-    if (lbTab === 'top') return rawLbData.filter(u => u.profit > 0);
+    if (lbTab === 'all') return sorted;
+    if (lbTab === 'top') return sorted.filter(u => u.profit > 0);
     if (lbTab === 'streak') {
-      return [...rawLbData].sort((a, b) => {
+      return [...sorted].sort((a, b) => {
         if (b.winRate !== a.winRate) return b.winRate - a.winRate;
         return b.resolvedTotal - a.resolvedTotal;
       });
     }
-    return rawLbData;
+    return sorted;
   })();
 
   const rankColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
@@ -77,18 +103,6 @@ export default function PredictLeaderboard({
     <div className="pg">
       <div className="lb-top">
         <p className="card-lbl">Prediction Leaderboard</p>
-        <div className="lb-auto-row">
-          <button
-            className={`lb-auto-btn ${autoRefresh ? 'active' : ''}`}
-            onClick={() => setAutoRefresh(v => !v)}
-            title={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-          >
-            {autoRefresh ? 'Live' : 'Paused'}
-          </button>
-          <button className="lb-refresh-btn" onClick={fetchLeaderboard} disabled={loading}>
-            {loading ? <span className="spin" /> : 'Refresh'}
-          </button>
-        </div>
       </div>
 
       <div className="lb-tabs">
@@ -107,21 +121,7 @@ export default function PredictLeaderboard({
         ))}
       </div>
 
-      {loading && rawLbData.length === 0 ? (
-        <div className="card">
-          <div className="empty">
-            <span className="spin" /> Loading leaderboard...
-          </div>
-        </div>
-      ) : error ? (
-        <div className="card">
-          <div className="empty" style={{ color: '#f85149' }}>
-            {error}
-            <button className="btn-primary" style={{ marginTop: 12, fontSize: '.8rem' }}
-              onClick={fetchLeaderboard}>Retry</button>
-          </div>
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="card">
           <div className="empty">
             No prediction data yet. Be the first to place a bet!
@@ -213,7 +213,7 @@ export default function PredictLeaderboard({
 
           <div className="lb-footer">
             <span>{filtered.length} predictors</span>
-            <span>On-Chain Data</span>
+            <span>Live Data</span>
           </div>
         </div>
       )}

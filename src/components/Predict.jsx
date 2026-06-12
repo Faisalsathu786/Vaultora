@@ -6,7 +6,6 @@ import {
 import { trimAddr, formatCountdown } from '../utils/format.js';
 import BrandingPanel from './BrandingPanel.jsx';
 import PredictLeaderboard from './PredictLeaderboard.jsx';
-import { usePredictionLeaderboard } from '../hooks/usePredictionLeaderboard.js';
 
 export default function Predict({
   wallet, getSigner, notify, markets, mkLoading, myBets, myAllBets,
@@ -37,10 +36,7 @@ export default function Predict({
   const [editEndTime, setEditEndTime] = useState({});
   const [endTimeSaving, setEndTimeSaving] = useState(null);
   const [cancelSaving, setCancelSaving] = useState(null);
-  // Prediction leaderboard
-  const { lbData, lbLoading, lbError, lbTab, setLbTab, fetchLeaderboard } =
-    usePredictionLeaderboard(wallet, isOwner);
-
+  const [lbTab, setLbTab] = useState('all');
   const withdrawFeesOnChain = async (tokenAddr, tokenName) => {
     try {
       setFeeWithdrawing(true);
@@ -204,13 +200,10 @@ export default function Predict({
       {marketTab === "leaderboard" && (
         <PredictLeaderboard
           wallet={wallet}
-          onChainLbData={lbData}
-          onChainLbLoading={lbLoading}
-          onChainLbError={lbError}
           lbTab={lbTab}
           setLbTab={setLbTab}
-          fetchLeaderboard={fetchLeaderboard}
           supabaseLbData={supabaseData?.lbData || []}
+          supabase={supabaseData?.supabase || null}
         />
       )}
       {marketTab !== "leaderboard" && hiddenCount > 0 && isOwner && (
