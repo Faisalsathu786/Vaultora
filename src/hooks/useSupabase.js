@@ -10,6 +10,7 @@ export function useSupabaseSync(wallet, getSigner) {
   const [lbLoading, setLbLoading] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [trades, setTrades] = useState([])
   const [isReady, setIsReady] = useState(false)
   const channelRef = useRef(null)
   const prevWalletRef = useRef(null)
@@ -67,6 +68,16 @@ export function useSupabaseSync(wallet, getSigner) {
   }, [wallet])
 
   // ── Mark notification as read ──
+  const fetchTrades = useCallback(async (limit = 50) => {
+    if (!supabase || !wallet) return
+    try {
+      const { data } = await supabase.from('market_trades')
+        .select('*').eq('user_address', wallet.toLowerCase())
+        .order('created_at', { ascending: false }).limit(limit)
+      if (data) setTrades(data)
+    } catch { }
+  }, [wallet])
+
   const markRead = useCallback(async (id) => {
     if (!supabase) return
     try {
@@ -285,7 +296,7 @@ export function useSupabaseSync(wallet, getSigner) {
   return {
     isReady,
     supabase,
-    lbData,
+    lbData, trades,
     lbLoading,
     fetchLeaderboard,
     notifications,

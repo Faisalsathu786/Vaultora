@@ -140,8 +140,25 @@ export default function Predict({
                 onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
               <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
                 onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
+              <button className={`cm-toggle ${portTab === 'tx' ? 'active' : ''}`}
+                onClick={() => setPortTab('tx')}>Tx History</button>
             </div>
-            {list.length === 0 ? (
+            {portTab === 'tx' ? (
+              supabaseData && supabaseData.trades && supabaseData.trades.length > 0 ? (
+                <table className="port-table"><thead><tr>
+                  <th>Date</th><th>Action</th><th>Market</th><th>Amount</th>
+                </tr></thead><tbody>
+                {supabaseData.trades.slice(0, 20).map((tx, i) => (
+                  <tr key={i}>
+                    <td style={{ fontSize: '.6rem' }}>{new Date(tx.created_at).toLocaleDateString()}</td>
+                    <td style={{ fontSize: '.6rem', textTransform: 'capitalize' }}>{tx.action}</td>
+                    <td style={{ fontSize: '.6rem' }}>Market #{tx.market_id}</td>
+                    <td style={{ fontSize: '.6rem' }}>{Number(tx.amount || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+                </tbody></table>
+              ) : <p className="empty">No transactions yet</p>
+            ) : list.length === 0 ? (
               <p className="empty">No {portTab} positions</p>
             ) : list.map(e => {
               const m = e.market; const p = e.pos;
