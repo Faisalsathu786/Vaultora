@@ -300,7 +300,6 @@ export default function App() {
               statusMsg={statusMsg} getSigner={getSigner}
               tokenIdx={tokenIdx} setTokenIdx={setTokenIdx}
               tierIdx={tierIdx} setTierIdx={setTierIdx}
-              markets={markets} supabaseData={supabaseData}
               amount={amount} setAmount={setAmount}
               walletBal={walletBal}
               handleDeposit={async () => {
