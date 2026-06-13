@@ -212,7 +212,7 @@ contract VaultoraMarkets {
 
     function mintAmount(uint256 net, uint256 s) public pure returns (uint256) {
         if (s == 0) return net;
-        return net * 1e10 / (s + 1e10);
+        return net * 200000 / (s + 200000);
     }
 
     function redeemTax(uint256 timeLeft, uint256 tokenAmount, uint256 _supply) public pure returns (uint256) {
