@@ -38,6 +38,12 @@ export default function Predict({
   };
 
   const handleSell = async (mId, outcome) => {
+    if (!sellAmt || Number(sellAmt) <= 0) {
+      const bal = positions[mId]?.balances?.[outcome] || 0;
+      if (bal > 0) setSellAmt(String(bal));
+      notify('Enter amount or use MAX button', 'error');
+      return;
+    }
     const ok = await sellTokens(mId, outcome);
     if (ok) { notify('Sold!', 'success'); fetchMarkets(); }
     else notify('Sell failed', 'error');
