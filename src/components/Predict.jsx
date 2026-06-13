@@ -40,16 +40,12 @@ export default function Predict({
 
   const getPositionValue = (mId, outcome, balance) => {
     const m = markets.find(x => x.id === mId);
-    if (!m || !m.pool || !m.supply) return { value: 0, pnl: 0, pct: 0 };
+    if (!m || !m.pool || !m.supply) return { value: 0, pct: 0 };
     const pool = Number(m.pool?.[outcome] || 0);
     const supply = Number(m.supply?.[outcome] || 1);
-    const currentValue = pool > 0 && supply > 0 ? (pool * balance) / supply : 0;
-    // Approximate entry: use totalPool / totalSupply as baseline
-    const avgEntry = Number(m.totalPool || 1) / Math.max(1, supply);
-    const entryValue = avgEntry * balance;
-    const pnl = currentValue - entryValue;
-    const pct = entryValue > 0 ? (pnl / entryValue) * 100 : 0;
-    return { value: currentValue, pnl, pct, entryValue };
+    const currentValue = pool > 0 && supply > 0 ? Number(((BigInt(pool) * BigInt(balance)) / BigInt(supply)).toString()) / 1e6 : 0;
+    const pct = pool > 0 && balance > 0 ? (pool / supply) * 100 : 0;
+    return { value: currentValue, pct };
   };
 
   const handleSell = async (mId, outcome) => {
@@ -153,12 +149,12 @@ export default function Predict({
                         const bal = Number(p.balances[oi] || 0);
                         if (bal <= 0) return null;
                         const pv = getPositionValue(m.id, oi, bal);
-                        const pnlCls = pv.pnl >= 0 ? '#34d399' : '#f87171';
+                        const vCls = '#a78bfa';
                         return (
                           <span key={oi} className={`portfolio-opt ${m.resolved && oi === m.winningOutcome ? 'win' : ''}`}>
                             <span>{opt}</span>
-                            <span style={{ color: pnlCls, marginLeft: 6, fontSize: '.62rem' }}>
-                              {pv.pnl >= 0 ? '+' : ''}{pv.pnl.toFixed(2)} ({pv.pct >= 0 ? '+' : ''}{pv.pct.toFixed(1)}%)
+                            <span style={{ color: vCls, marginLeft: 6, fontSize: '.62rem' }}>
+                              ${pv.value.toFixed(2)}
                             </span>
                           </span>
                         );
