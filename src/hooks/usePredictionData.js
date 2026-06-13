@@ -81,7 +81,8 @@ export function usePredictionData(wallet, getSigner) {
     try {
       const signer = await getSigner();
       const c = new ethers.Contract(PM_ADDRESS, abi, signer);
-      const tokenAddr = await c.paymentTokens(0);
+      const tokenInfo = await c.paymentTokens(0);
+      const tokenAddr = tokenInfo.addr || tokenInfo;
       const amt = ethers.parseUnits(betAmt, 6);
       const token = new ethers.Contract(tokenAddr, ['function approve(address,uint256) returns (bool)'], signer);
       await (await token.approve(PM_ADDRESS, amt)).wait();
