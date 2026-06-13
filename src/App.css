@@ -2945,3 +2945,16 @@ body {
 }
 .max-btn:hover { background: rgba(168,85,247,.22); }
 .bal-hint { font-size: .6rem; color: #888; margin-left: auto; }
+
+.portfolio-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); gap: 12px;
+}
+.portfolio-q { font-size: .72rem; color: #ddd; line-height: 1.3; }
+.portfolio-options { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.portfolio-opt {
+  font-size: .62rem; padding: 2px 7px; border-radius: 4px;
+  background: rgba(255,255,255,.06); color: #aaa;
+}
+.portfolio-opt.win { background: rgba(52,211,153,.12); color: #34d399; }
+.portfolio-action { flex-shrink: 0; }

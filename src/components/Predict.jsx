@@ -23,6 +23,7 @@ export default function Predict({
   const [resolveWin, setResolveWin] = useState({});
   const [claiming, setClaiming] = useState({});
   const [mktImages, setMktImages] = useState({});
+  const [portTab, setPortTab] = useState('active'); // active | pending | settled
 
   const uploadImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -100,6 +101,79 @@ export default function Predict({
           </button>
         </div>
       )}
+
+      {wallet && positions && Object.keys(positions).length > 0 && (() => {
+        const activePos = []; const pendingPos = []; const settledPos = [];
+        markets.forEach(m => {
+          const pos = positions[m.id];
+          if (!pos || pos.balances.every(b => b <= 0)) return;
+          const entry = { market: m, pos };
+          if (m.resolved) settledPos.push(entry);
+          else if (m.secsLeft <= 0 && !m.cancelled) pendingPos.push(entry);
+          else activePos.push(entry);
+        });
+        const list = portTab === 'active' ? activePos : portTab === 'pending' ? pendingPos : settledPos;
+        return (
+          <div className="card" style={{ marginBottom: 12 }}>
+            <p className="card-lbl">My Portfolio</p>
+            <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
+              <button className={`cm-toggle ${portTab === 'active' ? 'active' : ''}`}
+                onClick={() => setPortTab('active')}>Active ({activePos.length})</button>
+              <button className={`cm-toggle ${portTab === 'pending' ? 'active' : ''}`}
+                onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
+              <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
+                onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
+            </div>
+            {list.length === 0 ? (
+              <p className="empty">No {portTab} positions</p>
+            ) : list.map(e => {
+              const m = e.market; const p = e.pos;
+              const opts = m.options || [];
+              const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
+              return (
+                <div key={`p-${m.id}`} className="portfolio-row">
+                  <div className="portfolio-info">
+                    <span className="portfolio-q">{m.question}</span>
+                    <div className="portfolio-options">
+                      {opts.map((opt, oi) => {
+                        const bal = p.balances[oi] || 0;
+                        if (bal <= 0) return null;
+                        return (
+                          <span key={oi} className={`portfolio-opt ${m.resolved && oi === m.winningOutcome ? 'win' : ''}`}>
+                            {opt}: <b>{bal}</b>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="portfolio-action">
+                    {m.resolved ? (
+                      <button className="btn-primary" style={{ fontSize: '.68rem', padding: '3px 10px' }}
+                        onClick={async () => {
+                          const ok = await claimWinnings(m.id);
+                          notify(ok ? 'Claimed!' : 'Failed', ok ? 'success' : 'error');
+                        }}>
+                        Claim
+                      </button>
+                    ) : m.secsLeft <= 0 ? (
+                      <span style={{ color: '#fbbf24', fontSize: '.65rem' }}>Pending</span>
+                    ) : (
+                      <button className="btn-secondary" style={{ fontSize: '.65rem', padding: '3px 8px' }}
+                        onClick={async () => {
+                          setActiveMktId(m.id); setActionTab('sell');
+                          setMarketTab('active');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}>
+                        Sell
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {mkLoading ? (
         <p className="empty">Loading markets...</p>
