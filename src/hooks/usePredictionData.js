@@ -98,11 +98,12 @@ export function usePredictionData(wallet, getSigner) {
     try {
       const signer = await getSigner();
       const c = new ethers.Contract(PM_ADDRESS, abi, signer);
-      const tx = await c.sell(marketId, outcome, ethers.parseUnits(sellAmt, 6));
+      const rawAmt = ethers.parseUnits(sellAmt, 6);
+      const tx = await c.sell(marketId, outcome, rawAmt);
       await tx.wait();
       setSellAmt(''); fetchMarkets();
       return true;
-    } catch (e) { console.error('Sell error:', e); return false; }
+    } catch (e) { console.error('Sell error:', e); throw e; }
   };
 
   const createMarket = async () => {
