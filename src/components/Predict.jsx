@@ -49,8 +49,14 @@ export default function Predict({
   };
 
   const handleSell = async (mId, outcome) => {
-    if (!sellAmt || Number(sellAmt) <= 0) return;
-    const ok = await sellTokens(mId, outcome);
+    let amt = Number(sellAmt);
+    if (amt <= 0) {
+      const bal = positions[mId]?.balances?.[outcome] || 0;
+      if (bal <= 0) { notify('No tokens to sell', 'error'); return; }
+      amt = bal;
+      setSellAmt(String(bal));
+    }
+    const ok = await sellTokens(mId, outcome, amt);
     if (ok) { notify('Sold!', 'success'); fetchMarkets(); setSellAmt(''); }
     else notify('Sell failed', 'error');
   };
@@ -279,7 +285,7 @@ export default function Predict({
                         if (bal <= 0) return null;
                         return (
                           <button key={oi} className={`pred-vote-btn bet-opt-multi opt-${(oi % 5) + 1}`}
-                            onClick={() => { setSellAmt(String(bal)); handleSell(mId, oi); }}>
+                            onClick={() => handleSell(mId, oi)}>
                             <span>{opt}</span>
                             <span className="bal-hint">{Number(bal).toFixed(0)}</span>
                           </button>

@@ -100,12 +100,13 @@ export function usePredictionData(wallet, getSigner) {
     } catch (e) { console.error('Buy error:', e); return false; }
   };
 
-  const sellTokens = async (marketId, outcome) => {
-    if (!sellAmt || isNaN(sellAmt) || Number(sellAmt) <= 0) return false;
+  const sellTokens = async (marketId, outcome, overrideAmt) => {
+    const amt = overrideAmt || sellAmt;
+    if (!amt || isNaN(amt) || Number(amt) <= 0) return false;
     try {
       const signer = await getSigner();
       const c = new ethers.Contract(PM_ADDRESS, abi, signer);
-      const rawAmt = ethers.parseUnits(sellAmt, 6);
+      const rawAmt = ethers.parseUnits(String(amt), 6);
       const tx = await c.sell(marketId, outcome, rawAmt);
       await tx.wait();
       setSellAmt(''); fetchMarkets();
