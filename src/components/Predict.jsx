@@ -38,14 +38,9 @@ export default function Predict({
   };
 
   const handleSell = async (mId, outcome) => {
-    if (!sellAmt || Number(sellAmt) <= 0) {
-      const bal = positions[mId]?.balances?.[outcome] || 0;
-      if (bal > 0) setSellAmt(String(bal));
-      notify('Enter amount or use MAX button', 'error');
-      return;
-    }
+    if (!sellAmt || Number(sellAmt) <= 0) return;
     const ok = await sellTokens(mId, outcome);
-    if (ok) { notify('Sold!', 'success'); fetchMarkets(); }
+    if (ok) { notify('Sold!', 'success'); fetchMarkets(); setSellAmt(''); }
     else notify('Sell failed', 'error');
   };
 
@@ -176,22 +171,33 @@ export default function Predict({
                     </div>
                   </>
                 ) : (
-                  <>
-                    <input className="num-input" type="number" placeholder="Token amount to sell"
-                      value={sellAmt} onChange={e => setSellAmt(e.target.value)} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="amount-row">
+                      <input className="num-input" type="number" placeholder="0.00"
+                        value={sellAmt} onChange={e => setSellAmt(e.target.value)} />
+                      <button className="max-btn" onClick={() => {
+                        let mBal = 0;
+                        opts.forEach((_, oi) => {
+                          const b = positions[mId]?.balances?.[oi] || 0;
+                          if (b > mBal) mBal = b;
+                        });
+                        if (mBal > 0) setSellAmt(String(mBal));
+                      }}>MAX</button>
+                    </div>
                     <div className={`bet-opts-grid${multi && opts.length > 3 ? ' bet-opts-scroll' : ''}`}>
                       {opts.map((opt, oi) => {
                         const bal = positions[mId]?.balances?.[oi] || 0;
                         if (bal <= 0) return null;
                         return (
                           <button key={oi} className={`pred-vote-btn bet-opt-multi opt-${(oi % 5) + 1}`}
-                            onClick={() => handleSell(mId, oi)}>
-                            {opt} ({Number(bal).toFixed(2)})
+                            onClick={() => { setSellAmt(String(bal)); handleSell(mId, oi); }}>
+                            <span>{opt}</span>
+                            <span className="bal-hint">{Number(bal).toFixed(0)}</span>
                           </button>
                         );
                       })}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}

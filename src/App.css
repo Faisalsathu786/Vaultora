@@ -2933,3 +2933,15 @@ body {
   .hiw-table { font-size: .7rem; }
   .hiw-table th, .hiw-table td { padding: 8px 6px; }
 }
+
+.amount-row {
+  display: flex; gap: 6px; align-items: center;
+}
+.amount-row .num-input { flex: 1; }
+.max-btn {
+  background: rgba(168,85,247,.12); color: #a855f7; border: 1px solid rgba(168,85,247,.25);
+  font-size: .65rem; font-weight: 700; padding: 5px 12px; border-radius: 6px;
+  cursor: pointer; white-space: nowrap;
+}
+.max-btn:hover { background: rgba(168,85,247,.22); }
+.bal-hint { font-size: .6rem; color: #888; margin-left: auto; }
