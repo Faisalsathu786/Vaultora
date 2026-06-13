@@ -145,6 +145,8 @@ export function usePredictionData(wallet, getSigner) {
   const pmTxPage = 1; const setPmTxPage = () => {};
   const PM_TX_PAGE_SIZE = 20;
   const fetchPmTxHistory = async () => {};
+  const fetchPendingFees = async () => {};
+  const fetchContractConfig = async () => {};
 
   return { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
     activeMktId, setActiveMktId, actionTab, setActionTab,
@@ -152,5 +154,5 @@ export function usePredictionData(wallet, getSigner) {
     payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
     fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
     isOwner, siteLogo, siteName, claimWinningsOnChain,
-    pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, fetchPmTxHistory };
+    pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, fetchPmTxHistory, fetchPendingFees, fetchContractConfig };
 }
