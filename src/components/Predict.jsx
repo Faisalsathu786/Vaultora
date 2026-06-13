@@ -58,8 +58,10 @@ export default function Predict({
       setSellAmt(String(amt.toFixed(4)));
     }
     const ok = await sellTokens(mId, outcome, amt);
-    if (ok) { notify('Sold!', 'success'); fetchMarkets(); setSellAmt(''); }
-    else notify('Sell failed', 'error');
+    if (ok) {
+      notify('Sold!', 'success'); fetchMarkets(); setSellAmt('');
+      if (supabaseData?.syncTrade) supabaseData.syncTrade('sell', mId, outcome, sellAmt || amt, sellAmt);
+    } else notify('Sell failed', 'error');
   };
 
   const handleCreate = async () => {

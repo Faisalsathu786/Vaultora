@@ -78,6 +78,18 @@ export function useSupabaseSync(wallet, getSigner) {
     } catch { }
   }, [wallet])
 
+  const syncTrade = useCallback(async (action, marketId, outcome, amount, tokenAmount, txHash) => {
+    if (!supabase || !wallet) return
+    try {
+      await supabase.from('market_trades').insert({
+        user_address: wallet.toLowerCase(), market_id: marketId,
+        outcome, action, amount: String(amount || '0'),
+        token_amount: String(tokenAmount || ''), tx_hash: txHash || null,
+      })
+      fetchTrades()
+    } catch (e) { console.error('syncTrade error:', e) }
+  }, [wallet, fetchTrades])
+
   const markRead = useCallback(async (id) => {
     if (!supabase) return
     try {
@@ -308,5 +320,6 @@ export function useSupabaseSync(wallet, getSigner) {
     syncMarketResult,
     syncVaultDeposit,
     syncVaultWithdraw,
+    syncTrade,
   }
 }
