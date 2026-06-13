@@ -44,7 +44,7 @@ export default function Predict({
   const uploadImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setNewMkt(p => ({ ...p, imageUrl: reader.result }));
+    reader.onload = () => setNewMkt(p => ({ ...(p || {}), imageUrl: reader.result }));
     reader.readAsDataURL(file);
   };
 
@@ -105,43 +105,45 @@ export default function Predict({
 
   const isOpen = (m) => !m.resolved && !m.cancelled && m.secsLeft > 0;
 
-  // Filter + sort markets
   const filtered = useMemo(() => {
-    let list = [...markets];
-    // Search
-    if (search) list = list.filter(m => m.question.toLowerCase().includes(search.toLowerCase()));
-    // Category
-    if (catFilter !== 'All') list = list.filter(m => (m.category || 'Other') === catFilter);
-    // Status filter
-    if (filterTab === 'Resolved') list = list.filter(m => m.resolved);
-    else if (filterTab === 'New') list = list.filter(m => isOpen(m) && m.secsLeft > 7 * 86400);
-    else if (filterTab === 'Ending Soon') list = list.filter(m => isOpen(m) && m.secsLeft <= 3 * 86400 && m.secsLeft > 0);
-    else if (filterTab === 'Highest Volume') list = list.sort((a, b) => (Number(b.totalPool || 0)) - (Number(a.totalPool || 0)));
-    else list = list.filter(m => isOpen(m));
-    return list;
+    try {
+      let list = markets ? [...markets] : [];
+      if (search && list.length > 0) list = list.filter(m => m.question && m.question.toLowerCase().includes(search.toLowerCase()));
+      if (catFilter !== 'All') list = list.filter(m => (m.category || 'Other') === catFilter);
+      if (filterTab === 'Resolved') list = list.filter(m => m.status === 1 || m.resolved);
+      else if (filterTab === 'New') list = list.filter(m => !m.resolved && !m.cancelled && m.secsLeft > 7 * 86400);
+      else if (filterTab === 'Ending Soon') list = list.filter(m => !m.resolved && !m.cancelled && m.secsLeft > 0 && m.secsLeft <= 3 * 86400);
+      else if (filterTab === 'Highest Volume') list = [...list].sort((a, b) => Number(b.totalPool || 0) - Number(a.totalPool || 0));
+      else list = list.filter(m => !m.resolved && !m.cancelled && m.secsLeft > 0);
+      return list;
+    } catch { return []; }
   }, [markets, search, catFilter, filterTab]);
 
   // Portfolio data
   const portfolioData = useMemo(() => {
-    if (!wallet || !positions) return { active: [], pending: [], settled: [] };
-    const active = [], pending = [], settled = [];
-    markets.forEach(m => {
-      const pos = positions[m.id];
-      if (!pos || pos.balances.every(b => Number(b) <= 0)) return;
-      const entry = {
-        market: m,
-        outcomes: m.options.map((opt, oi) => {
-          const bal = Number(pos.balances[oi] || 0);
-          if (bal <= 0) return null;
-          const pv = getPositionValue(m.id, oi, bal);
-          return { opt, oi, balance: bal, value: pv.value };
-        }).filter(Boolean),
-      };
-      if (m.resolved) settled.push(entry);
-      else if (m.secsLeft <= 0 && !m.cancelled) pending.push(entry);
-      else if (entry.outcomes.length > 0) active.push(entry);
-    });
-    return { active, pending, settled };
+    try {
+      if (!wallet || !positions) return { active: [], pending: [], settled: [] };
+      const active = [], pending = [], settled = [];
+      (markets || []).forEach(m => {
+        try {
+          const pos = positions[m.id];
+          if (!pos || !pos.balances) return;
+          if (pos.balances.every(b => Number(b) <= 0)) return;
+          const outcomes = (m.options || []).map((opt, oi) => {
+            const bal = Number(pos.balances[oi] || 0);
+            if (bal <= 0) return null;
+            const pv = getPositionValue(m.id, oi, bal);
+            return { opt, oi, balance: bal, value: pv.value };
+          }).filter(Boolean);
+          const entry = { market: m, outcomes };
+          if (outcomes.length === 0) return;
+          if (m.resolved) settled.push(entry);
+          else if (m.secsLeft <= 0 && !m.cancelled) pending.push(entry);
+          else active.push(entry);
+        } catch {}
+      });
+      return { active, pending, settled };
+    } catch { return { active: [], pending: [], settled: [] }; }
   }, [markets, positions, wallet]);
 
   // Detail market view
@@ -163,7 +165,7 @@ export default function Predict({
             <span>{m.category || 'Other'}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 8 }}>
-            {opts.map((opt, oi) => {
+            {(opts || []).map((opt, oi) => {
               const pool = Number(m.pool?.[oi] || 0);
               const supply = Number(m.supply?.[oi] || 1);
               const price = supply > 0 ? (pool / supply / 1e6) : 0;
@@ -217,22 +219,22 @@ export default function Predict({
         <div className="card" style={{ marginBottom: 8 }}>
           <p className="card-lbl">Create Market</p>
           <input className="num-input" placeholder="Question" value={newMkt.question}
-            onChange={e => setNewMkt(p => ({ ...p, question: e.target.value }))} />
+            onChange={e => setNewMkt(p => ({ ...(p || {}), question: e.target.value }))} />
           <label className="cm-label" style={{ marginTop: 6 }}>Options ({newMkt.options.length}/10)</label>
           {newMkt.options.map((opt, oi) => (
             <div key={oi} style={{ display: 'flex', gap: 4, marginTop: 3 }}>
               <input className="num-input" placeholder={oi === 0 ? 'YES' : oi === 1 ? 'NO' : `Opt ${oi + 1}`}
-                value={opt} onChange={e => { const a = [...newMkt.options]; a[oi] = e.target.value; setNewMkt(p => ({ ...p, options: a })); }} />
+                value={opt} onChange={e => { const a = [...newMkt.options]; a[oi] = e.target.value; setNewMkt(p => ({ ...(p || {}), options: a })); }} />
               {newMkt.options.length > 2 && <button className="cm-opt-del"
-                onClick={() => setNewMkt(p => ({ ...p, options: p.options.filter((_, i) => i !== oi) }))}>X</button>}
+                onClick={() => setNewMkt(p => ({ ...(p || {}), options: p.options.filter((_, i) => i !== oi) }))}>X</button>}
             </div>
           ))}
           {newMkt.options.length < 10 && (
-            <button className="cm-add-opt" onClick={() => setNewMkt(p => ({ ...p, options: [...p.options, ''] }))}>+ Add</button>
+            <button className="cm-add-opt" onClick={() => setNewMkt(p => ({ ...(p || {}), options: [...p.options, ''] }))}>+ Add</button>
           )}
           <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center' }}>
             <input className="num-input" type="number" placeholder="Days" value={newMkt.days}
-              onChange={e => setNewMkt(p => ({ ...p, days: e.target.value }))} style={{ width: 70 }} />
+              onChange={e => setNewMkt(p => ({ ...(p || {}), days: e.target.value }))} style={{ width: 70 }} />
             <select className="num-input" value={catFilter === 'All' ? 'Other' : catFilter}
               onChange={e => {}} style={{ width: 100, fontSize: '.7rem' }}>
               {CATEGORIES.slice(1).map(c => <option key={c}>{c}</option>)}
@@ -265,7 +267,7 @@ export default function Predict({
                 {portTab === 'settled' && <th>Action</th>}
               </tr></thead>
               <tbody>
-                {portfolioData[portTab].map((entry, i) => entry.outcomes.map((o, j) => (
+                {(portfolioData[portTab] || []).map((entry, i) => (entry.outcomes || []).map((o, j) => (
                   <tr key={`${i}-${j}`}>
                     <td style={{ fontSize: '.68rem' }}>{entry.market.question.slice(0, 30)}</td>
                     <td style={{ fontSize: '.65rem' }}>{o.opt}</td>
@@ -303,14 +305,16 @@ export default function Predict({
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
-          {filtered.map(m => {
+          {(filtered || []).map(m => {
             const stats = mktStats[m.id] || {};
             const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
             const volume = (Number(m.totalPool || 0) / 1e6).toFixed(0);
-            const leading = (m.options || []).reduce((best, opt, oi) => {
-              const p = Number(m.pool?.[oi] || 0);
-              return p > (best.p || 0) ? { opt, p } : best;
-            }, { opt: '', p: 0 });
+            const leading = (() => { try {
+              if (!m.options || m.options.length === 0) return { opt: '', p: 0 };
+              let best = { opt: '', p: 0 };
+              m.options.forEach((opt, oi) => { const p = Number(m.pool?.[oi] || 0); if (p > best.p) best = { opt, p }; });
+              return best;
+            } catch { return { opt: '', p: 0 }; } })();
             const totalP = Number(m.totalPool || 1);
             const leadPct = totalP > 0 ? (leading.p / totalP * 100).toFixed(0) : 0;
 
