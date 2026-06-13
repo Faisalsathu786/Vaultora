@@ -2966,3 +2966,26 @@ body {
 .sp-label { font-size: .72rem; color: #a78bfa; font-weight: 600; margin-bottom: 6px; display: block; }
 .sp-row { display: flex; justify-content: space-between; font-size: .68rem; padding: 2px 0; color: #bbb; }
 .sp-total { border-top: 1px solid rgba(255,255,255,.08); margin-top: 4px; padding-top: 4px; font-weight: 700; color: #eee; }
+
+/* Portfolio table */
+.port-table { width: 100%; border-collapse: collapse; font-size: .65rem; }
+.port-table th { text-align: left; padding: 4px 6px; color: #777; font-weight: 500; font-size: .6rem; border-bottom: 1px solid rgba(255,255,255,.06); }
+.port-table td { padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.03); }
+.port-table tbody tr:hover { background: rgba(255,255,255,.02); }
+
+/* Skeleton loading */
+@keyframes pulse { 0%,100% { opacity: .2; } 50% { opacity: .4; } }
+.skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+
+/* Market card hover */
+.mkt-card { transition: border-color .15s; }
+.mkt-card:hover { border-color: rgba(168,133,247,.2); }
+
+/* Search bar */
+input.num-input[type="text"] { font-size: .72rem; }
+
+/* Scrollable filter tabs */
+.nav-bar::-webkit-scrollbar { display: none; }
+
+/* Detail page */
+.detail-back { font-size: .72rem; margin-bottom: 8px; background: transparent; border: none; color: #a78bfa; cursor: pointer; }
