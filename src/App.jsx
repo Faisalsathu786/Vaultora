@@ -83,19 +83,11 @@ export default function App() {
 
   // Prediction data
   const predData = usePredictionData(wallet, getSigner);
-  const { markets, mkLoading, myBets, myAllBets, betAmt, setBetAmt,
-          activeMktId, setActiveMktId, mktImages, mktOptions,
-          siteLogo, setSiteLogo, siteName, setSiteName, isOwner,
-          now, betTokenBal, marketTab, setMarketTab, classifyMarket, isFullyClaimed,
-          fetchMarkets, fetchBetTokenBal, fetchPayoutEstimate,
-          placeBetOnChain, claimWinningsOnChain,
-          fetchMarketBets, fetchContractConfig, fetchPendingFees,
-          showCreateForm, setShowCreateForm, newMkt, setNewMkt,
-          creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
-          isPaused, setIsPaused, globalCfg, setGlobalCfg, resolving, setResolving, resolveWinner, setResolveWinner,
-          mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading, payoutEst,
-          marketCategory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
-          softArchiveMarket, unarchiveMarket,
+  const { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
+          activeMktId, setActiveMktId, actionTab, setActionTab,
+          showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
+          payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
+          fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
   } = predData;
 
   // Supabase sync
@@ -344,33 +336,27 @@ export default function App() {
 
           {page === "predict" && (
             <ErrorBoundary>
-            <Predict wallet={wallet} getSigner={getSigner} notify={showToast}
-              markets={markets} mkLoading={mkLoading} myBets={myBets} myAllBets={myAllBets}
+            <Predict wallet={wallet} getSigner={getSigner}
+              notify={showToast}
+              markets={markets} mkLoading={mkLoading}
               betAmt={betAmt} setBetAmt={setBetAmt}
+              sellAmt={sellAmt} setSellAmt={setSellAmt}
               activeMktId={activeMktId} setActiveMktId={setActiveMktId}
-              mktImages={mktImages} mktOptions={mktOptions}
-              siteLogo={siteLogo} setSiteLogo={setSiteLogo}
-              siteName={siteName} setSiteName={setSiteName} isOwner={isOwner}
-              now={now} betTokenBal={betTokenBal} marketTab={marketTab} setMarketTab={setMarketTab}
-              classifyMarket={classifyMarket} isFullyClaimed={isFullyClaimed}
-              fetchMarkets={fetchMarkets} fetchBetTokenBal={fetchBetTokenBal}
-              fetchPayoutEstimate={fetchPayoutEstimate}
-              placeBetOnChain={placeBetOnChain} claimWinningsOnChain={claimWinningsOnChain}
-              fetchMarketBets={fetchMarketBets}
+              actionTab={actionTab} setActionTab={setActionTab}
               showCreateForm={showCreateForm} setShowCreateForm={setShowCreateForm}
               newMkt={newMkt} setNewMkt={setNewMkt}
-              creating={creating} setCreating={setCreating}
-              pendingFees={pendingFees} feeWithdrawing={feeWithdrawing}
-              setFeeWithdrawing={setFeeWithdrawing}
-              isPaused={isPaused} setIsPaused={setIsPaused} globalCfg={globalCfg} setGlobalCfg={setGlobalCfg}
-              resolving={resolving} setResolving={setResolving} resolveWinner={resolveWinner} setResolveWinner={setResolveWinner}
-              mktBetsTab={mktBetsTab} setMktBetsTab={setMktBetsTab}
-              mktBets={mktBets} mktBetsLoading={mktBetsLoading}
-              payoutEst={payoutEst}
-              marketCategory={marketCategory}
-              softArchiveMarket={softArchiveMarket} unarchiveMarket={unarchiveMarket}
-              fetchContractConfig={fetchContractConfig} fetchPendingFees={fetchPendingFees}
-              syncBet={syncBet} syncVaultDeposit={syncVaultDeposit} syncMarketResult={syncMarketResult}
+              creating={creating}
+              payoutEst={payoutEst} sellPayout={sellPayout}
+              positions={positions}
+              now={now} marketTab={marketTab} setMarketTab={setMarketTab}
+              fetchMarkets={fetchMarkets} fetchPayoutEst={fetchPayoutEst}
+              buyTokens={buyTokens} sellTokens={sellTokens}
+              createMarket={createMarket} resolveMarket={resolveMarket}
+              claimWinnings={claimWinnings}
+              supabaseLbData={supabaseData?.lbData || []}
+              supabase={supabaseData?.supabase || null}
+              syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}
+              syncMarketResult={syncMarketResult}
               supabaseData={supabaseData} />
             </ErrorBoundary>
           )}

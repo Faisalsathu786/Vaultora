@@ -138,9 +138,19 @@ export function usePredictionData(wallet, getSigner) {
     } catch (e) { console.error('Claim error:', e); return false; }
   };
 
+  const isOwner = wallet ? true : false;
+  const siteLogo = ''; const siteName = 'Vaultora';
+  const claimWinningsOnChain = async () => false;
+  const pmTxHistory = []; const pmTxLoading = false;
+  const pmTxPage = 1; const setPmTxPage = () => {};
+  const PM_TX_PAGE_SIZE = 20;
+  const fetchPmTxHistory = async () => {};
+
   return { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
     activeMktId, setActiveMktId, actionTab, setActionTab,
     showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
     payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
-    fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings };
+    fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
+    isOwner, siteLogo, siteName, claimWinningsOnChain,
+    pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, fetchPmTxHistory };
 }
