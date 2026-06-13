@@ -88,6 +88,7 @@ export default function App() {
           showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
           payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
           fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
+          isOwner, siteLogo, siteName, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, claimWinningsOnChain,
   } = predData;
 
   // Supabase sync
