@@ -38,6 +38,20 @@ export default function Predict({
     else notify('Buy failed', 'error');
   };
 
+  const getPositionValue = (mId, outcome, balance) => {
+    const m = markets.find(x => x.id === mId);
+    if (!m || !m.pool || !m.supply) return { value: 0, pnl: 0, pct: 0 };
+    const pool = Number(m.pool?.[outcome] || 0);
+    const supply = Number(m.supply?.[outcome] || 1);
+    const currentValue = pool > 0 && supply > 0 ? (pool * balance) / supply : 0;
+    // Approximate entry: use totalPool / totalSupply as baseline
+    const avgEntry = Number(m.totalPool || 1) / Math.max(1, supply);
+    const entryValue = avgEntry * balance;
+    const pnl = currentValue - entryValue;
+    const pct = entryValue > 0 ? (pnl / entryValue) * 100 : 0;
+    return { value: currentValue, pnl, pct, entryValue };
+  };
+
   const handleSell = async (mId, outcome) => {
     if (!sellAmt || Number(sellAmt) <= 0) return;
     const ok = await sellTokens(mId, outcome);
@@ -132,15 +146,20 @@ export default function Predict({
               const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
               return (
                 <div key={`p-${m.id}`} className="portfolio-row">
-                  <div className="portfolio-info">
+                  <div className="portfolio-info" style={{ flex: 1 }}>
                     <span className="portfolio-q">{m.question}</span>
                     <div className="portfolio-options">
                       {opts.map((opt, oi) => {
-                        const bal = p.balances[oi] || 0;
+                        const bal = Number(p.balances[oi] || 0);
                         if (bal <= 0) return null;
+                        const pv = getPositionValue(m.id, oi, bal);
+                        const pnlCls = pv.pnl >= 0 ? '#34d399' : '#f87171';
                         return (
                           <span key={oi} className={`portfolio-opt ${m.resolved && oi === m.winningOutcome ? 'win' : ''}`}>
-                            {opt}: <b>{bal}</b>
+                            <span>{opt}</span>
+                            <span style={{ color: pnlCls, marginLeft: 6, fontSize: '.62rem' }}>
+                              {pv.pnl >= 0 ? '+' : ''}{pv.pnl.toFixed(2)} ({pv.pct >= 0 ? '+' : ''}{pv.pct.toFixed(1)}%)
+                            </span>
                           </span>
                         );
                       })}

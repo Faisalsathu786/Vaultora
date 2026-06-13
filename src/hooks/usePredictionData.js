@@ -43,11 +43,18 @@ export function usePredictionData(wallet, getSigner) {
       for (let i = 0; i < count; i++) {
         const m = await c.getMarket(i);
         const secsLeft = Number(m.endTime) - Math.floor(Date.now() / 1000);
+                const supply = {}; const pool = {};
+        for (let j = 0; j < m.options.length; j++) {
+          try { supply[j] = Number(await c.supply(i, j)); } catch { supply[j] = 0; }
+          try { pool[j] = Number(await c.pools(i, j)); } catch { pool[j] = 0; }
+        }
+        const tp = Number(await c.totalPool(i));
         results.push({
           id: i, question: m.question, options: m.options,
           endTime: Number(m.endTime), status: Number(m.status),
           tokenIdx: Number(m.tokenIdx), winningOutcome: Number(m.winningOutcome),
           secsLeft, cancelled: Number(m.status) === 2, resolved: Number(m.status) === 1,
+          supply, pool, totalPool: tp,
         });
       }
       setMarkets(results);
