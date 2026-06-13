@@ -1,388 +1,146 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import {
-  PM_ADDRESS, PM_ABI, USDC_ADDRESS, EURC_ADDRESS,
-  OWNER_ADDRESS, ARCSCAN_API, SESSION_KEY,
-} from '../constants/contracts.js';
+import { PM_ADDRESS } from '../constants/contracts.js';
+import abi from '../../contracts/VaultoraMarkets.json';
+
+const RPC = 'https://rpc.testnet.arc.network';
+
+function getProvider() {
+  if (window.ethereum) return new ethers.BrowserProvider(window.ethereum);
+  return new ethers.JsonRpcProvider(RPC);
+}
 
 export function usePredictionData(wallet, getSigner) {
-  const [markets,        setMarkets]        = useState([]);
-  const [myBets,         setMyBets]         = useState({});
-  const [myAllBets,      setMyAllBets]      = useState({});
-  const [mkLoading,      setMkLoading]      = useState(false);
-  const [betAmt,         setBetAmt]         = useState("");
-  const [activeMktId,    setActiveMktId]    = useState(null);
+  const [markets, setMarkets] = useState([]);
+  const [mkLoading, setMkLoading] = useState(false);
+  const [betAmt, setBetAmt] = useState('');
+  const [sellAmt, setSellAmt] = useState('');
+  const [activeMktId, setActiveMktId] = useState(null);
+  const [actionTab, setActionTab] = useState('buy');
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newMkt,         setNewMkt]         = useState({ question: "", options: ["YES", "NO"], days: "7", token: 0, imageUrl: "" });
-  const [mktImages,      setMktImages]      = useState({});
-  const [mktOptions,     setMktOptions]     = useState({});
-  const [marketCategory, setMarketCategory] = useState({});
-  const [siteLogo,       setSiteLogo]       = useState("");
-  const [siteName,       setSiteName]       = useState("Vaultora");
-  const [creating,       setCreating]       = useState(false);
-  const [mktBetsTab,     setMktBetsTab]     = useState({});
-  const [mktBets,        setMktBets]        = useState({});
-  const [mktBetsLoading, setMktBetsLoading] = useState({});
-  const [payoutEst,      setPayoutEst]      = useState({});
-  const [now,            setNow]            = useState(Math.floor(Date.now() / 1000));
-  const [betTokenBal,    setBetTokenBal]    = useState({ 0: "0", 1: "0" });
-  const [marketTab,      setMarketTab]      = useState("active");
-  const [archivedIds,    setArchivedIds]    = useState(() => { try { return JSON.parse(localStorage.getItem("vt_archived") || "[]"); } catch { return []; } });
-  const [hiddenIds,      setHiddenIds]      = useState(() => { try { return JSON.parse(localStorage.getItem("vt_hidden") || "[]"); } catch { return []; } });
-  const [pendingFees,    setPendingFees]    = useState({ usdc: "0", eurc: "0" });
-  const [isPaused,       setIsPaused]       = useState(false);
-  const [globalCfg,      setGlobalCfg]      = useState({ minBet: "1", feeBps: "200" });
-  const [pmTxHistory,    setPmTxHistory]    = useState([]);
-  const [pmTxLoading,    setPmTxLoading]    = useState(false);
-  const [pmTxPage,       setPmTxPage]       = useState(0);
-  const [resolving,      setResolving]      = useState(false);
-  const [resolveWinner,  setResolveWinner]  = useState({});
-  const [feeWithdrawing, setFeeWithdrawing] = useState(false);
-  const PM_TX_PAGE_SIZE = 20;
+  const [newMkt, setNewMkt] = useState({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
+  const [creating, setCreating] = useState(false);
+  const [payoutEst, setPayoutEst] = useState({});
+  const [sellPayout, setSellPayout] = useState({});
+  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+  const [marketTab, setMarketTab] = useState('active');
+  const [positions, setPositions] = useState({});
+  const [tokBal, setTokBal] = useState('0');
 
-  const isOwner = wallet?.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+  useEffect(() => { const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000); return () => clearInterval(t); }, []);
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(t);
+  const pm = useCallback(() => {
+    const p = getProvider();
+    return new ethers.Contract(PM_ADDRESS, abi, p);
   }, []);
 
-  const classifyMarket = useCallback((m) => {
-    const status    = Number(m.status);
-    const endTime   = Number(m.endTime);
-    const id        = Number(m.id);
-    if (hiddenIds.includes(id)) return "hidden";
-    if (archivedIds.includes(id)) return "ended";
-    if (status === 2) return "hidden";
-    if (status === 0 && endTime > now) return "active";
-    if (status === 0 && endTime <= now) return "ended";
-    if (status === 1) return "resolved";
-    return "ended";
-  }, [now, archivedIds, hiddenIds]);
-
-  const isFullyClaimed = useCallback((m) => {
-    if (Number(m.status) !== 1) return false;
-    const bArr = myAllBets[m.id.toString()] || [];
-    if (bArr.length === 0) return false;
-    const winOutcome = Number(m.winningOutcome);
-    const unclaimedWins = bArr.filter(b => !b.claimed && Number(b.outcome) === winOutcome);
-    return unclaimedWins.length === 0;
-  }, [myAllBets]);
-
-  const getProvider = () => {
-    if (window.ethereum) return new ethers.BrowserProvider(window.ethereum);
-    return new ethers.JsonRpcProvider("https://rpc.testnet.arc.network");
-  };
-
-  const fetchMarkets = async (signer) => {
+  const fetchMarkets = useCallback(async () => {
+    setMkLoading(true);
     try {
-      setMkLoading(true);
-      const s = signer || await getSigner();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, s);
-      const all = await pm.getAllMarkets();
-      setMarkets(all);
-      const allMyBets = {};
-      // TODO: cache bet queries per market so we dont re-fetch on every cycle
-      for (const m of all) {
-        try {
-          const bArr = await pm.getMyBets(m.id);
-          if (bArr.length > 0) allMyBets[m.id.toString()] = bArr;
-        } catch {}
+      const c = pm();
+      const count = Number(await c.marketCount());
+      const results = [];
+      for (let i = 0; i < count; i++) {
+        const m = await c.getMarket(i);
+        const secsLeft = Number(m.endTime) - Math.floor(Date.now() / 1000);
+        results.push({
+          id: i, question: m.question, options: m.options,
+          endTime: Number(m.endTime), status: Number(m.status),
+          tokenIdx: Number(m.tokenIdx), winningOutcome: Number(m.winningOutcome),
+          secsLeft, cancelled: Number(m.status) === 2, resolved: Number(m.status) === 1,
+        });
       }
-      setMyAllBets(allMyBets);
-      // legacy aggregate for backward compat
-      const legacy = {};
-      for (const [mid, bArr] of Object.entries(allMyBets)) {
-        const unclaimed = bArr.filter(b => !b.claimed);
-        if (unclaimed.length > 0) {
-          legacy[mid] = { amount: unclaimed.reduce((s, b) => s + b.amount, 0n), outcome: unclaimed[0].outcome, claimed: false, count: unclaimed.length };
+      setMarkets(results);
+      if (wallet && count > 0) {
+        const pos = {};
+        for (let i = 0; i < count; i++) {
+          try {
+            const p = await c.getPosition(i, wallet);
+            pos[i] = { holdings: p.holdings.map(Number), balances: p.balances.map(Number) };
+          } catch {}
         }
+        setPositions(pos);
       }
-      setMyBets(legacy);
-    } catch (e) { console.error("fetchMarkets:", e); }
-    finally { setMkLoading(false); }
-  };
+    } catch (e) { console.error('Fetch error:', e); }
+    setMkLoading(false);
+  }, [pm, wallet]);
 
-  const fetchBetTokenBal = async (tokenIdx) => {
-    if (!wallet) return;
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const addr = tokenIdx === 0 ? USDC_ADDRESS : EURC_ADDRESS;
-      const erc20 = new ethers.Contract(addr, ["function balanceOf(address) view returns (uint256)"], provider);
-      const bal = await erc20.balanceOf(wallet);
-      setBetTokenBal(p => ({ ...p, [tokenIdx]: ethers.formatUnits(bal, 6) }));
-    } catch {}
-  };
+  useEffect(() => { fetchMarkets(); }, [fetchMarkets]);
 
-  const fetchPayoutEstimate = async (marketId, outcome, amount) => {
+  const fetchPayoutEst = useCallback(async (marketId, outcome, amount) => {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
-      const provider = getProvider();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-      const amt = ethers.parseUnits(amount, 6);
-      const est = await pm.estimatePayout(marketId, outcome, amt);
+      const c = pm();
+      const est = await c.estimatePayout(marketId, outcome, ethers.parseUnits(amount, 6));
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: ethers.formatUnits(est, 6) }));
     } catch {}
-  };
+  }, [pm]);
 
-  const placeBetOnChain = async (marketId, outcome, tokenIdx) => {
-    if (!betAmt || isNaN(betAmt) || Number(betAmt) <= 0) return;
+  const buyTokens = async (marketId, outcome) => {
+    if (!betAmt || isNaN(betAmt) || Number(betAmt) <= 0) return false;
     try {
       const signer = await getSigner();
-      const tokenAddr = tokenIdx === 0 ? USDC_ADDRESS : EURC_ADDRESS;
-      const tokenContract = new ethers.Contract(tokenAddr, ["function approve(address spender, uint256 amount) returns (bool)"], signer);
+      const c = new ethers.Contract(PM_ADDRESS, abi, signer);
+      const tokenAddr = await c.paymentTokens(0);
       const amt = ethers.parseUnits(betAmt, 6);
-      await (await tokenContract.approve(PM_ADDRESS, amt)).wait();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      await (await pm.placeBet(marketId, outcome, amt)).wait();
-      setBetAmt("");
-      setActiveMktId(null);
-      await fetchMarkets(signer);
-      fetchBetTokenBal(tokenIdx);
+      const token = new ethers.Contract(tokenAddr, ['function approve(address,uint256) returns (bool)'], signer);
+      await (await token.approve(PM_ADDRESS, amt)).wait();
+      const tx = await c.buy(marketId, outcome, amt);
+      await tx.wait();
+      setBetAmt(''); fetchMarkets();
       return true;
-    } catch (e) {
-      throw e;
-    }
+    } catch (e) { console.error('Buy error:', e); return false; }
   };
 
-  const claimWinningsOnChain = async (marketId) => {
-    const signer = await getSigner();
-    const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-    await (await pm.claimAllWinnings(marketId)).wait();
-    await fetchMarkets(signer);
-  };
-
-  const fetchPmTxHistory = async (userAddr) => {
-    if (!userAddr || !window.ethereum) return;
-    try {
-      setPmTxLoading(true);
-      const browserProvider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await browserProvider.getSigner();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      const mktList = await pm.getAllMarkets();
-      const entries = [];
-      await Promise.all(mktList.map(async (m) => {
-        try {
-          const bets = await pm.getMyBets(m.id);
-          if (!bets || bets.length === 0) return;
-          const tokenSym = Number(m.tokenIdx) === 0 ? "USDC" : "EURC";
-          const status = Number(m.status);
-          const resolved = status === 1;
-          const cancelled = status === 2;
-          for (const b of bets) {
-            if (Number(b.amount) === 0) continue;
-            const isWinner = resolved && Number(b.outcome) === Number(m.winningOutcome);
-            const isLoser = resolved && Number(b.outcome) !== Number(m.winningOutcome);
-            const outcomeLabel = Number(b.outcome) === 1 ? m.outcomeA : m.outcomeB;
-            let result = "Pending";
-            let resultClass = "pending";
-            if (cancelled && !b.claimed) { result = "Refundable"; resultClass = "refund"; }
-            else if (cancelled && b.claimed) { result = "Refunded"; resultClass = "lost"; }
-            else if (b.claimed && isWinner) { result = "Won ✓"; resultClass = "won"; }
-            else if (!b.claimed && isWinner) { result = "Won — Claim!"; resultClass = "won-unclaimed"; }
-            else if (isLoser) { result = "Lost"; resultClass = "lost"; }
-            entries.push({
-              marketId: Number(m.id), question: m.question, betIndex: Number(b.betIndex),
-              amount: ethers.formatUnits(b.amount, 6), outcome: outcomeLabel,
-              outcomeIdx: Number(b.outcome), claimed: b.claimed, timestamp: Number(b.timestamp),
-              result, resultClass, tokenSym, marketStatus: status,
-            });
-          }
-        } catch {}
-      }));
-      entries.sort((a, b) => b.timestamp - a.timestamp);
-      setPmTxHistory(entries);
-      setPmTxPage(0);
-    } catch {}
-    finally { setPmTxLoading(false); }
-  };
-
-  const fetchMarketBets = async (marketId) => {
-    const key = marketId.toString();
-    if (mktBetsLoading[key]) return;
-    setMktBetsLoading(p => ({ ...p, [key]: true }));
-    try {
-      const provider = getProvider();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-      const filter = pm.filters.BetPlaced(marketId);
-      const events = await pm.queryFilter(filter, 0, "latest");
-      const bets = events.map(e => ({
-        user: e.args.user, outcome: Number(e.args.outcome),
-        amount: ethers.formatUnits(e.args.amount, 6),
-        txHash: e.transactionHash, block: e.blockNumber,
-      }));
-      const claimFilter = pm.filters.WinningsClaimed(marketId);
-      const claims = await pm.queryFilter(claimFilter, 0, "latest");
-      const claimedAddrs = new Set(claims.map(e => e.args.user.toLowerCase()));
-      setMktBets(p => ({ ...p, [key]: bets.map(b => ({ ...b, claimed: claimedAddrs.has(b.user.toLowerCase()) })) }));
-    } catch { setMktBets(p => ({ ...p, [key]: [] })); }
-    finally { setMktBetsLoading(p => ({ ...p, [key]: false })); }
-  };
-
-  const fetchContractConfig = useCallback(async () => {
-    if (!isOwner) return;
-    try {
-      const p = getProvider();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, p);
-      const [paused, minBet, feeBps] = await Promise.all([pm.paused(), pm.globalMinBet(), pm.globalFeeBps()]);
-      setIsPaused(paused);
-      setGlobalCfg({ minBet: (Number(minBet) / 1e6).toString(), feeBps: feeBps.toString() });
-    } catch {}
-  }, [isOwner]);
-
-  const fetchPendingFees = useCallback(async () => {
-    if (!isOwner) return;
-    try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-      const [u, e] = await Promise.all([pm.getPendingFees(USDC_ADDRESS), pm.getPendingFees(EURC_ADDRESS)]);
-      setPendingFees({ usdc: ethers.formatUnits(u, 6), eurc: ethers.formatUnits(e, 6) });
-    } catch {}
-  }, [isOwner]);
-
-  // HACK: setTimeout because MetaMask injects slowly after page reload
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const loadBranding = async () => {
-        try {
-          const provider = getProvider();
-          const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-          const [logo, name] = await Promise.all([pm.siteLogo(), pm.siteName()]);
-          if (logo) setSiteLogo(logo);
-          if (name) setSiteName(name);
-        } catch {}
-      };
-      loadBranding();
-    }, 500);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (markets.length === 0) return;
-    (async () => {
-      try {
-        const provider = getProvider();
-        const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, provider);
-        const imgMap = {}; const optMap = {}; const catMap = {};
-        await Promise.all(markets.map(async m => {
-          try {
-            const [img, opts] = await Promise.all([
-              pm.marketImages(m.id).catch(() => ""),
-              pm.getMarketOptions(m.id).catch(() => []),
-            ]);
-            const cat = await pm.marketCategory(m.id).catch(() => "");
-            if (img) imgMap[m.id.toString()] = img;
-            if (opts?.length > 0) optMap[m.id.toString()] = opts;
-            if (cat) catMap[m.id.toString()] = cat;
-          } catch {}
-        }));
-        if (Object.keys(imgMap).length > 0) setMktImages(p => ({ ...p, ...imgMap }));
-        if (Object.keys(optMap).length > 0) setMktOptions(p => ({ ...p, ...optMap }));
-        if (Object.keys(catMap).length > 0) setMarketCategory(p => ({ ...p, ...catMap }));
-      } catch {}
-    })();
-  }, [markets]);
-
-
-  useEffect(() => { localStorage.setItem("vt_archived", JSON.stringify(archivedIds)); }, [archivedIds]);
-  useEffect(() => { localStorage.setItem("vt_hidden", JSON.stringify(hiddenIds)); }, [hiddenIds]);
-
-  const softArchiveMarket = async (id, notify) => {
-    try {
-      const mkt = markets.find(m => Number(m.id) === Number(id));
-      const status = mkt ? Number(mkt.status) : 0;
-
-      if (status === 0) {
-        // Active market — on-chain cancelMarket (shows wallet popup)
-        const signer = await getSigner();
-        const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-        await (await pm.cancelMarket(id)).wait();
-        await fetchMarkets(signer);
-      }
-      // All markets: add to archived set (resolved markets skip on-chain tx)
-      setArchivedIds(p => [...new Set([...p, Number(id)])]);
-      if (notify) notify("Moved to Ended Markets", "success");
-    } catch (e) {
-      if (notify) notify(e?.reason?.slice(0, 60) || e?.message?.slice(0, 60) || "Failed", "error");
-    }
-  };
-  const unarchiveMarket = async (id, notify) => {
-    setArchivedIds(p => p.filter(x => x !== Number(id)));
+  const sellTokens = async (marketId, outcome) => {
+    if (!sellAmt || isNaN(sellAmt) || Number(sellAmt) <= 0) return false;
     try {
       const signer = await getSigner();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      const ts = Math.floor(Date.now() / 1000) + 86400 * 365;
-      await (await pm.setMarketEndTime(id, ts)).wait();
-      await fetchMarkets(signer);
-      if (notify) notify("Restored", "success");
-    } catch (e) {
-      if (notify) notify(e?.reason || "Failed", "error");
-    }
+      const c = new ethers.Contract(PM_ADDRESS, abi, signer);
+      const tx = await c.sell(marketId, outcome, ethers.parseUnits(sellAmt, 6));
+      await tx.wait();
+      setSellAmt(''); fetchMarkets();
+      return true;
+    } catch (e) { console.error('Sell error:', e); return false; }
   };
-  const cancelAllPastOnChain = async (notify, setProgress) => {
-    if (!window.ethereum) {
-      notify("MetaMask not installed", "error");
-      if (setProgress) setProgress(false);
-      return;
-    }
+
+  const createMarket = async () => {
+    if (!newMkt.question.trim()) return;
+    setCreating(true);
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const pm = new ethers.Contract(PM_ADDRESS, PM_ABI, signer);
-      const toCancel = markets.filter(m => Number(m.status) === 0 && Number(m.endTime) <= now);
-      const toArchive = markets.filter(m => Number(m.status) === 1);
-      const total = toCancel.length + toArchive.length;
-      if (total === 0) {
-        notify("No past markets", "success");
-        if (setProgress) setProgress(false);
-        return;
-      }
-      let done = 0;
-      for (const m of toCancel) {
-        try {
-          if (setProgress) setProgress(`Cancelling #${m.id}...`);
-          const tx = await pm.cancelMarket(m.id);
-          await tx.wait();
-          done++;
-        } catch { done++; }
-      }
-      if (toArchive.length > 0) {
-        setArchivedIds(p => [...new Set([...p, ...toArchive.map(m => Number(m.id))])]);
-        done += toArchive.length;
-      }
-      if (setProgress) setProgress(false);
-      await fetchMarkets(signer);
-      notify(`${done} cleared`, "success");
-    } catch (e) {
-      if (setProgress) setProgress(false);
-      notify("User rejected or wallet error", "error");
-    }
+      const signer = await getSigner();
+      const c = new ethers.Contract(PM_ADDRESS, abi, signer);
+      const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
+      const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
+      await (await c.createMarket(newMkt.question, opts, endTime, newMkt.token)).wait();
+      setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
+      setShowCreateForm(false); fetchMarkets();
+      return true;
+    } catch (e) { console.error('Create error:', e); return false; }
+    finally { setCreating(false); }
   };
 
-  const saveMktImage = (id, url) => {
-    setMktImages(p => { const n = { ...p, [id.toString()]: url }; localStorage.setItem("vt_mkt_images", JSON.stringify(n)); return n; });
-  };
-  const saveMktOptions = (id, opts) => {
-    setMktOptions(p => { const n = { ...p, [id.toString()]: opts }; localStorage.setItem("vt_mkt_options", JSON.stringify(n)); return n; });
+  const resolveMarket = async (marketId, outcome) => {
+    try {
+      const signer = await getSigner();
+      const c = new ethers.Contract(PM_ADDRESS, abi, signer);
+      await (await c.resolveMarket(marketId, outcome)).wait();
+      fetchMarkets(); return true;
+    } catch (e) { console.error('Resolve error:', e); return false; }
   };
 
-  return {
-    markets, myBets, myAllBets, mkLoading, betAmt, setBetAmt,
-    activeMktId, setActiveMktId, showCreateForm, setShowCreateForm,
-    newMkt, setNewMkt, mktImages, mktOptions, marketCategory,
-    siteLogo, setSiteLogo, siteName, setSiteName, isOwner,
-    creating, setCreating, pendingFees, feeWithdrawing, setFeeWithdrawing,
-    isPaused, globalCfg, resolving, setResolving, resolveWinner, setResolveWinner,
-    pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE,
-    mktBetsTab, setMktBetsTab, mktBets, mktBetsLoading,
-    payoutEst, now, betTokenBal, marketTab, setMarketTab,
-    classifyMarket, isFullyClaimed,
-    fetchMarkets, fetchBetTokenBal, fetchPayoutEstimate,
-    placeBetOnChain, claimWinningsOnChain,
-    fetchPmTxHistory, fetchMarketBets,
-    fetchContractConfig, fetchPendingFees,
-    isPaused, setIsPaused, globalCfg, setGlobalCfg,
-    softArchiveMarket, unarchiveMarket, saveMktImage, saveMktOptions,
-    hiddenIds, setHiddenIds, cancelAllPastOnChain,
+  const claimWinnings = async (marketId) => {
+    try {
+      const signer = await getSigner();
+      const c = new ethers.Contract(PM_ADDRESS, abi, signer);
+      await (await c.claimWinnings(marketId)).wait();
+      fetchMarkets(); return true;
+    } catch (e) { console.error('Claim error:', e); return false; }
   };
+
+  return { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
+    activeMktId, setActiveMktId, actionTab, setActionTab,
+    showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
+    payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
+    fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings };
 }
