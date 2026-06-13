@@ -106,7 +106,7 @@ export function usePredictionData(wallet, getSigner) {
     try {
       const signer = await getSigner();
       const c = new ethers.Contract(PM_ADDRESS, abi, signer);
-      const rawAmt = ethers.parseUnits(String(amt), 6);
+      const rawAmt = BigInt(Math.floor(Number(amt) * 1e6));
       const tx = await c.sell(marketId, outcome, rawAmt);
       await tx.wait();
       setSellAmt(''); fetchMarkets();

@@ -2958,3 +2958,11 @@ body {
 }
 .portfolio-opt.win { background: rgba(52,211,153,.12); color: #34d399; }
 .portfolio-action { flex-shrink: 0; }
+
+.sell-preview {
+  background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.12);
+  border-radius: 8px; padding: 10px; margin: 6px 0;
+}
+.sp-label { font-size: .72rem; color: #a78bfa; font-weight: 600; margin-bottom: 6px; display: block; }
+.sp-row { display: flex; justify-content: space-between; font-size: .68rem; padding: 2px 0; color: #bbb; }
+.sp-total { border-top: 1px solid rgba(255,255,255,.08); margin-top: 4px; padding-top: 4px; font-weight: 700; color: #eee; }

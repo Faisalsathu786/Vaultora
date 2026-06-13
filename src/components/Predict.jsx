@@ -23,6 +23,7 @@ export default function Predict({
   const [resolveWin, setResolveWin] = useState({});
   const [claiming, setClaiming] = useState({});
   const [mktImages, setMktImages] = useState({});
+  const [sellPreview, setSellPreview] = useState(null);
   const [portTab, setPortTab] = useState('active'); // active | pending | settled
 
   const uploadImage = async (e) => {
@@ -53,8 +54,8 @@ export default function Predict({
     if (amt <= 0) {
       const bal = positions[mId]?.balances?.[outcome] || 0;
       if (bal <= 0) { notify('No tokens to sell', 'error'); return; }
-      amt = bal;
-      setSellAmt(String(bal));
+      amt = Number(bal) / 1e6;
+      setSellAmt(String(amt.toFixed(4)));
     }
     const ok = await sellTokens(mId, outcome, amt);
     if (ok) { notify('Sold!', 'success'); fetchMarkets(); setSellAmt(''); }
@@ -250,6 +251,19 @@ export default function Predict({
                   <>
                     <input className="num-input" type="number" placeholder={`Amount (${tokSym})`}
                       value={betAmt} onChange={e => { setBetAmt(e.target.value); opts.forEach((_, oi) => { fetchPayoutEst(mId, oi, e.target.value); }); }} />
+                    {sellPreview && (
+                      <div className="sell-preview">
+                        <span className="sp-label">Sell {sellPreview.opt}</span>
+                        <div className="sp-row"><span>Estimated payout</span><span>${sellPreview.gross.toFixed(2)}</span></div>
+                        <div className="sp-row"><span>Fee (0.8%)</span><span>-${sellPreview.fee.toFixed(2)}</span></div>
+                        {sellPreview.tax > 0 && <div className="sp-row"><span>Redeem tax</span><span>-${sellPreview.tax.toFixed(2)}</span></div>}
+                        <div className="sp-row sp-total"><span>You receive</span><span>${sellPreview.net.toFixed(2)}</span></div>
+                        <button className="btn-primary full" onClick={async () => {
+                          await handleSell(mId, sellPreview.outcome);
+                          setSellPreview(null);
+                        }}>Confirm Sell</button>
+                      </div>
+                    )}
                     <div className={`bet-opts-grid${multi && opts.length > 3 ? ' bet-opts-scroll' : ''}`}>
                       {opts.map((opt, oi) => {
                         const cls = multi ? ('bet-opt-multi opt-' + ((oi % 5) + 1)) : (oi === 0 ? 'bull' : 'bear');
@@ -269,25 +283,54 @@ export default function Predict({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div className="amount-row">
                       <input className="num-input" type="number" placeholder="0.00"
-                        value={sellAmt} onChange={e => setSellAmt(e.target.value)} />
+                        value={sellAmt} onChange={e => {
+                        setSellAmt(e.target.value);
+                        setSellPreview(null);
+                      }} />
                       <button className="max-btn" onClick={() => {
                         let mBal = 0;
                         opts.forEach((_, oi) => {
                           const b = positions[mId]?.balances?.[oi] || 0;
                           if (b > mBal) mBal = b;
                         });
-                        if (mBal > 0) setSellAmt(String(mBal));
+                        if (mBal > 0) setSellAmt(String((mBal / 1e6).toFixed(4)));
                       }}>MAX</button>
                     </div>
+                    {sellPreview && (
+                      <div className="sell-preview">
+                        <span className="sp-label">Sell {sellPreview.opt}</span>
+                        <div className="sp-row"><span>Estimated payout</span><span>${sellPreview.gross.toFixed(2)}</span></div>
+                        <div className="sp-row"><span>Fee (0.8%)</span><span>-${sellPreview.fee.toFixed(2)}</span></div>
+                        {sellPreview.tax > 0 && <div className="sp-row"><span>Redeem tax</span><span>-${sellPreview.tax.toFixed(2)}</span></div>}
+                        <div className="sp-row sp-total"><span>You receive</span><span>${sellPreview.net.toFixed(2)}</span></div>
+                        <button className="btn-primary full" onClick={async () => {
+                          await handleSell(mId, sellPreview.outcome);
+                          setSellPreview(null);
+                        }}>Confirm Sell</button>
+                      </div>
+                    )}
                     <div className={`bet-opts-grid${multi && opts.length > 3 ? ' bet-opts-scroll' : ''}`}>
                       {opts.map((opt, oi) => {
                         const bal = positions[mId]?.balances?.[oi] || 0;
                         if (bal <= 0) return null;
                         return (
                           <button key={oi} className={`pred-vote-btn bet-opt-multi opt-${(oi % 5) + 1}`}
-                            onClick={() => handleSell(mId, oi)}>
+                            onClick={() => {
+                              const amt = Number(sellAmt) || Number(positions[mId]?.balances?.[oi]) / 1e6;
+                              if (amt <= 0) { notify('No tokens to sell', 'error'); return; }
+                              const m = markets.find(x => x.id === mId);
+                              const pool = Number(m?.pool?.[oi] || 0);
+                              const supply = Number(m?.supply?.[oi] || 1);
+                              const bal = Number(positions[mId]?.balances?.[oi] || 0);
+                              const rawAmt = amt * 1e6;
+                              const share = Math.min(rawAmt, bal);
+                              const gross = pool > 0 && supply > 0 ? (pool * share) / supply / 1e6 : 0;
+                              const fee = gross * 0.008;
+                              const tax = Math.min(gross * 0.3, gross * 0.3);
+                              setSellPreview({ opt, outcome: oi, gross, fee, tax, net: Math.max(0, gross - fee - tax) });
+                            }}>
                             <span>{opt}</span>
-                            <span className="bal-hint">{Number(bal).toFixed(0)}</span>
+                            <span className="bal-hint">{(Number(bal) / 1e6).toFixed(4)}</span>
                           </button>
                         );
                       })}
