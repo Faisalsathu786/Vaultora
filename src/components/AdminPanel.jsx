@@ -20,7 +20,6 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [marketId, setMarketId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [resolvePick, setResolvePick] = useState({});
-  const [feeData, setFeeData] = useState(null);
 
   useEffect(() => {
     if (!wallet) return;
@@ -39,22 +38,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
     }).catch(e => console.error('Owner check failed:', e));
   }, [wallet]);
 
-  // Fetch pending fees
-  useEffect(() => {
-    if (!wallet || !isOwner) return;
-    const p = getProvider();
-    const c = new ethers.Contract(PM_ADDRESS, abi, p);
-    c.getTokens().then(async tokens => {
-      const data = [];
-      for (let i = 0; i < tokens.length; i++) {
-        try {
-          const amt = await c.pendingFees(tokens[i].addr);
-          if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: Number(ethers.formatUnits(amt, 6)) });
-        } catch {}
-      }
-      setFeeData(data.length > 0 ? data : []);
-    }).catch(() => setFeeData([]));
-  }, [wallet, isOwner]);
+
 
   const run = async (label, fn) => {
     setActionLoading(true);
@@ -196,22 +180,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           }).catch(() => setFeeData([]));
         }, [wallet]);
 
-  // Fetch pending fees
-  useEffect(() => {
-    if (!wallet || !isOwner) return;
-    const p = getProvider();
-    const c = new ethers.Contract(PM_ADDRESS, abi, p);
-    c.getTokens().then(async tokens => {
-      const data = [];
-      for (let i = 0; i < tokens.length; i++) {
-        try {
-          const amt = await c.pendingFees(tokens[i].addr);
-          if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: Number(ethers.formatUnits(amt, 6)) });
-        } catch {}
-      }
-      setFeeData(data.length > 0 ? data : []);
-    }).catch(() => setFeeData([]));
-  }, [wallet, isOwner]);
+
         return (
           <div className="card">
             <p className="card-lbl">Accumulated Fees</p>
