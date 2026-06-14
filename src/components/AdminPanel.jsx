@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS } from '../constants/contracts.js';
 import abi from '../../contracts/VaultoraMarkets.json';
+import FeesTab from './FeesTab.jsx';
 
 const RPC = 'https://rpc.testnet.arc.network';
 function getProvider() {
@@ -162,41 +163,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
 
 
-      {tab === 'fees' && (() => {
-        const [feeData, setFeeData] = useState(null);
-        useEffect(() => {
-          if (!wallet) return;
-          const p = getProvider();
-          const c = new ethers.Contract(PM_ADDRESS, abi, p);
-          c.getTokens().then(async tokens => {
-            const data = [];
-            for (let i = 0; i < tokens.length; i++) {
-              try {
-                const amt = await c.pendingFees(tokens[i].addr);
-                if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: ethers.formatUnits(amt, 6) });
-              } catch {}
-            }
-            setFeeData(data);
-          }).catch(() => setFeeData([]));
-        }, [wallet]);
-
-
-        return (
-          <div className="card">
-            <p className="card-lbl">Accumulated Fees</p>
-            {feeData === null ? <p className="empty">Loading...</p> : feeData.length === 0 ? (
-              <p className="empty">No fees available</p>
-            ) : feeData.map((f, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
-                <span style={{ fontSize: '.72rem' }}>{f.symbol}: <b>{Number(f.amount).toFixed(2)}</b></span>
-                <button className="btn-primary" style={{ fontSize: '.6rem', padding: '3px 10px' }}
-                  disabled={actionLoading}
-                  onClick={() => run('Withdraw', c => c.withdrawFees(f.idx))}>Withdraw</button>
-              </div>
-            ))}
-          </div>
-        );
-      })()}
+      {tab === 'fees' && <FeesTab actionLoading={actionLoading} run={run} getProvider={getProvider} />}
     </div>
   );
 }
