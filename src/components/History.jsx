@@ -56,6 +56,7 @@ export default function History({
               if (!wallet || txRefreshing) return;
               setTxRefreshing(true);
               try { if (fetchOnChainHistory) await fetchOnChainHistory(wallet); } catch {}
+              if (supabaseData?.fetchTrades) supabaseData.fetchTrades();
               setTxRefreshing(false);
             }} disabled={txRefreshing}>
               Refresh
@@ -125,7 +126,8 @@ export default function History({
                     onClick={()=>claimWinningsOnChain(t.marketId)}>Claim</button>}
                 {t.resultClass==="refund" &&
                   <button className="btn-primary" style={{fontSize:".72rem",padding:"4px 10px",marginTop:4,background:"#fbbf24",color:"#000"}}
-                    onClick={async()=>{try{const s=await getSigner();const pm=new ethers.Contract(PM_ADDRESS,PM_ABI,s);await(await pm.refundCancelled(t.marketId,t.betIndex)).wait();notify("Refund claimed!","success");fetchPmTxHistory(wallet);}catch(e){notify((e?.reason||"Refund failed").slice(0,100),"error");}}}>Refund</button>}
+                    onClick={async()=>{try{const s=await getSigner();const pm=new ethers.Contract(PM_ADDRESS,PM_ABI,s);await(await pm.refundCancelled(t.marketId,t.betIndex)).wait();notify("Refund claimed!","success");fetchPmTxHistory(wallet);
+                if (supabaseData?.fetchTrades) supabaseData.fetchTrades();}catch(e){notify((e?.reason||"Refund failed").slice(0,100),"error");}}}>Refund</button>}
               </div>
             </div>
           ))}
@@ -155,6 +157,29 @@ export default function History({
             </button>
           </div>
         </div>
+        {!supabaseData?.trades || supabaseData.trades.length === 0 ? null : (
+          <div style={{marginTop: 8}}>
+            <p className="card-lbl">Prediction Trades</p>
+            {supabaseData.trades.slice(0, 20).map((tx, i) => (
+              <div key={i} className="tx-row">
+                <div className={`tx-icon ${tx.action === 'buy' ? 'in' : 'out'}`}>
+                  {tx.action === 'buy' ? 'B' : tx.action === 'sell' ? 'S' : 'C'}
+                </div>
+                <div className="tx-detail">
+                  <span className="tx-type">{tx.action === 'buy' ? 'Buy' : tx.action === 'sell' ? 'Sell' : 'Claim'}</span>
+                  <span className="tx-time">{new Date(tx.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}</span>
+                </div>
+                <div className="tx-amount">
+                  <span style={{color: tx.action === 'buy' ? '#34d399' : '#f87171'}}>
+                    {tx.action === 'buy' ? '+' : '-'}{Number(tx.amount || 0).toFixed(2)}
+                  </span>
+                  <span style={{fontSize:'.6rem',color:'#777',display:'block'}}>Market #{tx.market_id} · Out {Number(tx.outcome) + 1}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {!wallet ? <p className="empty">Connect wallet to see notifications</p>
         : !supabaseNotifications || supabaseNotifications.length === 0 ? <p className="empty">No notifications yet</p>
         : supabaseNotifications.map(n => (
