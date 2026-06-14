@@ -77,6 +77,10 @@ export default function History({
               if (!wallet || txRefreshing) return;
               setTxRefreshing(true);
               try { if (fetchOnChainHistory) await fetchOnChainHistory(wallet); } catch {}
+              if (supabaseData?.supabase) {
+                supabaseData.supabase.from('market_trades').select('*').eq('user_address', wallet.toLowerCase()).order('created_at', { ascending: false }).limit(50)
+                  .then(({ data }) => { if (data) setTradeTxs(data); }).catch(() => {});
+              }
               setTxRefreshing(false);
             }} disabled={txRefreshing}>
               Refresh

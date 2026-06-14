@@ -35,8 +35,10 @@ export default function Predict({
 
   const handleBuy = async (mId, outcome) => {
     const ok = await buyTokens(mId, outcome);
-    if (ok) { notify('Bought!', 'success'); fetchMarkets(); }
-    else notify('Buy failed', 'error');
+    if (ok) {
+      notify('Bought!', 'success'); fetchMarkets();
+      if (supabaseData?.syncTrade) supabaseData.syncTrade('buy', mId, outcome, betAmt, '0');
+    } else notify('Buy failed', 'error');
   };
 
   const getPositionValue = (mId, outcome, balance) => {
