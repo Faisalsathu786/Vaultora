@@ -2966,3 +2966,37 @@ body {
 .sp-label { font-size: .72rem; color: #a78bfa; font-weight: 600; margin-bottom: 6px; display: block; }
 .sp-row { display: flex; justify-content: space-between; font-size: .68rem; padding: 2px 0; color: #bbb; }
 .sp-total { border-top: 1px solid rgba(255,255,255,.08); margin-top: 4px; padding-top: 4px; font-weight: 700; color: #eee; }
+
+
+/* Desktop readability — Polymarket-style */
+@media (min-width: 768px) {
+  .pg { max-width: 960px; margin: 0 auto; }
+  .card-lbl { font-size: .95rem !important; }
+  .mkt-q { font-size: .95rem !important; }
+  .mkt-out { font-size: .8rem !important; padding: 6px 14px !important; }
+  .num-input { font-size: .85rem !important; }
+  .btn-primary, .btn-secondary { font-size: .78rem !important; padding: 8px 18px !important; }
+  .cm-toggle { font-size: .78rem !important; padding: 6px 14px !important; }
+  .empty { font-size: .9rem !important; }
+  .hero-title { font-size: 2.4rem !important; }
+  .hero-sub { font-size: 1rem !important; }
+  .tx-type, .tx-time, .pmhist-question, .pmhist-meta { font-size: .82rem !important; }
+  .mkt-time { font-size: .78rem !important; }
+  .pred-vote-btn { font-size: .78rem !important; padding: 8px 14px !important; }
+  .payout-hint { font-size: .72rem !important; }
+  .portfolio-q { font-size: .82rem !important; }
+  .port-table th, .port-table td { font-size: .78rem !important; padding: 8px 10px !important; }
+  .kpi-v { font-size: 2.6rem !important; }
+  .kpi-l { font-size: .9rem !important; }
+  .pmhist-stat-val { font-size: 1.2rem !important; }
+  .pmhist-stat-lbl { font-size: .75rem !important; }
+  .nav-item { font-size: .85rem !important; padding: 8px 16px !important; }
+  .lb-tab { font-size: .82rem !important; }
+  .cm-label { font-size: .82rem !important; }
+  .lb-th-num, .lb-td-num, .lb-th-wallet, .lb-td-wallet { font-size: .78rem !important; }
+  .mkt-options-grid { gap: 8px !important; }
+  .bet-opts-grid { gap: 8px !important; }
+  .mkt-card { padding: 14px !important; }
+  .card { padding: 18px !important; }
+  input.num-input::placeholder { font-size: .82rem !important; }
+}
