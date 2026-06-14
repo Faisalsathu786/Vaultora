@@ -17,6 +17,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [paused, setPaused] = useState(false);
   const [tokenAddr, setTokenAddr] = useState('');
   const [tokenSym, setTokenSym] = useState('');
+  const [marketId, setMarketId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [resolvePick, setResolvePick] = useState({});
 
