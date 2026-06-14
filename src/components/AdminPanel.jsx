@@ -15,15 +15,10 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [feeBps, setFeeBps] = useState('80');
   const [minBet, setMinBet] = useState('0');
   const [paused, setPaused] = useState(false);
-  const [logo, setLogo] = useState('');
-  const [siteName, setSiteName] = useState('Vaultora');
-  const [siteDesc, setSiteDesc] = useState('');
-  const [fees, setFees] = useState(null);
   const [tokenAddr, setTokenAddr] = useState('');
   const [tokenSym, setTokenSym] = useState('');
-  const [marketId, setMarketId] = useState('');
-  const [winningOutcome, setWinningOutcome] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [resolvePick, setResolvePick] = useState({});
 
   useEffect(() => {
     if (!wallet) return;
@@ -71,47 +66,55 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         <button className={`cm-toggle${tab === 'markets' ? ' active' : ''}`} onClick={() => setTab('markets')}>Markets</button>
         <button className={`cm-toggle${tab === 'config' ? ' active' : ''}`} onClick={() => setTab('config')}>Config</button>
         <button className={`cm-toggle${tab === 'tokens' ? ' active' : ''}`} onClick={() => setTab('tokens')}>Tokens</button>
-        <button className={`cm-toggle${tab === 'branding' ? ' active' : ''}`} onClick={() => setTab('branding')}>Branding</button>
         <button className={`cm-toggle${tab === 'fees' ? ' active' : ''}`} onClick={() => setTab('fees')}>Fees</button>
       </div>
 
       {tab === 'markets' && (
         <div className="card">
-          <p className="card-lbl">Market Management</p>
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: '.72rem', fontWeight: 600, marginBottom: 6 }}>Resolve Market</p>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input className="num-input" placeholder="Market ID" value={marketId}
-                onChange={e => setMarketId(e.target.value)} style={{ width: 80 }} />
-              <input className="num-input" placeholder="Winner (1-10)" value={winningOutcome}
-                onChange={e => setWinningOutcome(e.target.value)} style={{ width: 80 }} />
-              <button className="btn-primary" style={{ fontSize: '.65rem' }}
-                disabled={actionLoading || !marketId || !winningOutcome}
-                onClick={() => run('Resolve', c => c.resolveMarket(Number(marketId), Number(winningOutcome) - 1))}>Resolve</button>
-            </div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: '.72rem', fontWeight: 600, marginBottom: 6 }}>Cancel Market</p>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input className="num-input" placeholder="Market ID" value={marketId}
-                onChange={e => setMarketId(e.target.value)} style={{ width: 80 }} />
-              <button className="btn-secondary" style={{ fontSize: '.65rem', color: '#f87171' }}
-                disabled={actionLoading || !marketId}
-                onClick={() => run('Cancel', c => c.cancelMarket(Number(marketId)))}>Cancel</button>
-            </div>
-          </div>
-          <div>
-            <p style={{ fontSize: '.72rem', fontWeight: 600, marginBottom: 6 }}>Extend Market</p>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input className="num-input" placeholder="Market ID" value={marketId}
-                onChange={e => setMarketId(e.target.value)} style={{ width: 80 }} />
-              <input className="num-input" placeholder="Days to extend" value={winningOutcome}
-                onChange={e => setWinningOutcome(e.target.value)} style={{ width: 80 }} />
-              <button className="btn-secondary" style={{ fontSize: '.65rem' }}
-                disabled={actionLoading || !marketId || !winningOutcome}
-                onClick={() => run('Extend', c => c.extendMarket(Number(marketId), Math.floor(Date.now()/1000) + Number(winningOutcome) * 86400))}>Extend</button>
-            </div>
-          </div>
+          <p className="card-lbl">Markets — Select winning outcome and resolve</p>
+          {markets.length === 0 ? <p className="empty">No markets</p> : markets.map((m, i) => {
+            const opts = m.options || [];
+            const expired = !m.resolved && !m.cancelled && m.secsLeft <= 0;
+            const sel = resolvePick[m.id];
+            return (
+              <div key={m.id} className="mkt-card" style={{marginBottom: 6}}>
+                <p style={{fontSize:'.7rem', fontWeight:600, margin:'0 0 4px'}}>
+                  #{m.id} {m.question}
+                  {m.resolved ? <span className="mkt-ended-badge" style={{fontSize:'.55rem'}}>Resolved</span> : null}
+                  {m.cancelled ? <span className="mkt-cancelled-badge" style={{fontSize:'.55rem'}}>Cancelled</span> : null}
+                  {expired ? <span className="mkt-ended-badge" style={{fontSize:'.55rem',background:'#fbbf24',color:'#000'}}>Expired</span> : null}
+                  {!m.resolved && !m.cancelled && m.secsLeft > 0 ? <span style={{fontSize:'.55rem',color:'#777'}}>{Math.floor(m.secsLeft/86400)}d left</span> : null}
+                </p>
+                <div style={{display:'flex', gap:4, flexWrap:'wrap', marginBottom:6}}>
+                  {opts.map((opt, oi) => (
+                    m.resolved ? (
+                      <span key={oi} className={`mkt-out ${oi === m.winningOutcome ? 'win' : 'neu'}`} style={{fontSize:'.6rem', opacity: oi === m.winningOutcome ? 1 : 0.4}}>
+                        {opt} {oi === m.winningOutcome ? '✓' : ''}
+                      </span>
+                    ) : (
+                      <button key={oi} className={`mkt-out ${sel === oi ? 'win' : ''}`} style={{fontSize:'.6rem', cursor:'pointer', border: sel === oi ? '2px solid #34d399' : 'none', background: sel === oi ? 'rgba(52,211,153,.1)' : 'transparent'}}
+                        onClick={() => setResolvePick(p => ({...p, [m.id]: oi}))}>
+                        {opt} {sel === oi ? '✓' : ''}
+                      </button>
+                    )
+                  ))}
+                </div>
+                {!m.resolved && !m.cancelled && (
+                  <div style={{display:'flex', gap:6}}>
+                    <button className="btn-primary" style={{fontSize:'.6rem', padding:'3px 10px'}}
+                      disabled={actionLoading || sel === undefined}
+                      onClick={() => run('Resolve', c => c.resolveMarket(m.id, sel))}>Resolve</button>
+                    <button className="btn-secondary" style={{fontSize:'.6rem', padding:'3px 10px', color:'#f87171'}}
+                      disabled={actionLoading}
+                      onClick={() => run('Cancel', c => c.cancelMarket(m.id))}>Cancel</button>
+                    <button className="btn-secondary" style={{fontSize:'.6rem', padding:'3px 10px'}}
+                      disabled={actionLoading}
+                      onClick={() => run('Extend', c => c.extendMarket(m.id, Math.floor(Date.now()/1000) + 7*86400))}>+7d</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -154,25 +157,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         </div>
       )}
 
-      {tab === 'branding' && (
-        <div className="card">
-          <p className="card-lbl">Branding</p>
-          <div style={{ marginBottom: 6 }}>
-            <p style={{ fontSize: '.6rem', color: '#777' }}>Logo URL</p>
-            <input className="num-input" value={logo} onChange={e => setLogo(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <p style={{ fontSize: '.6rem', color: '#777' }}>Site Name</p>
-            <input className="num-input" value={siteName} onChange={e => setSiteName(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div style={{ marginBottom: 6 }}>
-            <p style={{ fontSize: '.6rem', color: '#777' }}>Description</p>
-            <input className="num-input" value={siteDesc} onChange={e => setSiteDesc(e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <button className="btn-primary" style={{ fontSize: '.65rem' }} disabled={actionLoading}
-            onClick={() => run('Branding update', c => c.setBranding(logo, siteName, siteDesc))}>Save</button>
-        </div>
-      )}
+
 
       {tab === 'fees' && (
         <div className="card">
