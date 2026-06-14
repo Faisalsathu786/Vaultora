@@ -10,7 +10,7 @@ export default function History({
 }) {
   const [txRefreshing, setTxRefreshing] = useState(false);
   const [supabaseTxs, setSupabaseTxs] = useState([]);
-  const [tradeTxs, setTradeTxs] = useState([]);
+  
 
   // Merge local + Supabase vault deposits for cross-device history
   const mergedVaultTxs = supabaseTxs.length > 0
@@ -44,20 +44,6 @@ export default function History({
       .catch(() => {});
   }, [wallet, supabaseData]);
 
-  // Load prediction trades from Supabase
-  useEffect(() => {
-    if (!wallet || !supabaseData?.supabase) return;
-    supabaseData.supabase
-      .from('market_trades')
-      .select('*')
-      .eq('user_address', wallet.toLowerCase())
-      .order('created_at', { ascending: false })
-      .limit(50)
-      .then(({ data, error }) => {
-        if (!error && data) setTradeTxs(data);
-      })
-      .catch(() => {});
-  }, [wallet, supabaseData]);
 
   return (
     <div className="pg">
