@@ -11,8 +11,8 @@ export default function History({
   const [txRefreshing, setTxRefreshing] = useState(false);
   const [supabaseTxs, setSupabaseTxs] = useState([]);
   const [tradeTxs, setTradeTxs] = useState([]);
-  const [actTab, setActTab] = useState('all');
-  // Merge local + Supabase vault deposits
+
+  // Merge local + Supabase vault deposits for cross-device history
   const mergedVaultTxs = supabaseTxs.length > 0
     ? (() => {
         const existingIds = new Set(txHistory.map(t => String(t.id || '')));
@@ -29,7 +29,7 @@ export default function History({
       })()
     : txHistory;
 
-  // Load vault deposits from Supabase
+  // Load vault deposits from Supabase for cross-device history
   useEffect(() => {
     if (!wallet || !supabaseData?.supabase) return;
     supabaseData.supabase
@@ -58,29 +58,18 @@ export default function History({
       })
       .catch(() => {});
   }, [wallet, supabaseData]);
+
   return (
     <div className="pg">
       <div className="card">
         <div className="lb-top">
-          <p className="card-lbl">Activity</p>
-          <div className="nav-bar" style={{ gap: 4, marginBottom: 8 }}>
-            {['all', 'vault', 'prediction', 'notification'].map(t => (
-              <button key={t} className={`cm-toggle${actTab === t ? ' active' : ''}`}
-                onClick={() => setActTab(t)} style={{ fontSize: '.62rem', textTransform: 'capitalize' }}>
-                {t === 'all' ? 'All' : t === 'vault' ? 'Vault' : t === 'prediction' ? 'Trades' : 'Alerts'}
-              </button>
-            ))}
-          </div>
+          <p className="card-lbl">Vault Transactions</p>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {txRefreshing && <span className="spin" />}
             <button className="cm-toggle" onClick={async () => {
               if (!wallet || txRefreshing) return;
               setTxRefreshing(true);
               try { if (fetchOnChainHistory) await fetchOnChainHistory(wallet); } catch {}
-              if (supabaseData?.supabase) {
-                supabaseData.supabase.from('market_trades').select('*').eq('user_address', wallet.toLowerCase()).order('created_at', { ascending: false }).limit(50)
-                  .then(({ data }) => { if (data) setTradeTxs(data); }).catch(() => {});
-              }
               setTxRefreshing(false);
             }} disabled={txRefreshing}>
               Refresh
