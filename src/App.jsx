@@ -294,7 +294,7 @@ export default function App() {
           authStep={authStep} setAuthStep={setAuthStep} setAuthError={setAuthError} />
       ) : (
         <>
-          <Nav page={page} setPage={setPage} />
+          <Nav page={page} setPage={setPage} isOwner={isOwner} />
 
           {page === "home" && (
             <Home wallet={wallet} deposits={deposits} interests={interests}

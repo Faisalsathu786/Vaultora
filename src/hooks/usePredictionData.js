@@ -148,7 +148,15 @@ export function usePredictionData(wallet, getSigner) {
     } catch (e) { console.error('Claim error:', e); return false; }
   };
 
-  const isOwner = wallet ? true : false;
+  const [isOwner, setIsOwner] = useState(false);
+  useEffect(() => {
+    if (!wallet) { setIsOwner(false); return; }
+    try {
+      const p = getProvider();
+      const c = new ethers.Contract(PM_ADDRESS, abi, p);
+      c.owner().then(owner => setIsOwner(owner.toLowerCase() === wallet.toLowerCase())).catch(() => {});
+    } catch {}
+  }, [wallet]);
   const siteLogo = ''; const siteName = 'Vaultora';
   const claimWinningsOnChain = async () => false;
   const pmTxHistory = []; const pmTxLoading = false;
