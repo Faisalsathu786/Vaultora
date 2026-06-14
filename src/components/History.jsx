@@ -10,8 +10,9 @@ export default function History({
 }) {
   const [txRefreshing, setTxRefreshing] = useState(false);
   const [supabaseTxs, setSupabaseTxs] = useState([]);
-
-  // Merge local + Supabase vault deposits for cross-device history
+  const [tradeTxs, setTradeTxs] = useState([]);
+  const [actTab, setActTab] = useState('all');
+  // Merge local + Supabase vault deposits
   const mergedVaultTxs = supabaseTxs.length > 0
     ? (() => {
         const existingIds = new Set(txHistory.map(t => String(t.id || '')));
@@ -28,7 +29,7 @@ export default function History({
       })()
     : txHistory;
 
-  // Load vault deposits from Supabase for cross-device history
+  // Load vault deposits from Supabase
   useEffect(() => {
     if (!wallet || !supabaseData?.supabase) return;
     supabaseData.supabase
@@ -42,11 +43,34 @@ export default function History({
       })
       .catch(() => {});
   }, [wallet, supabaseData]);
+
+  // Load prediction trades from Supabase
+  useEffect(() => {
+    if (!wallet || !supabaseData?.supabase) return;
+    supabaseData.supabase
+      .from('market_trades')
+      .select('*')
+      .eq('user_address', wallet.toLowerCase())
+      .order('created_at', { ascending: false })
+      .limit(50)
+      .then(({ data, error }) => {
+        if (!error && data) setTradeTxs(data);
+      })
+      .catch(() => {});
+  }, [wallet, supabaseData]);
   return (
     <div className="pg">
       <div className="card">
         <div className="lb-top">
-          <p className="card-lbl">Vault Transactions</p>
+          <p className="card-lbl">Activity</p>
+          <div className="nav-bar" style={{ gap: 4, marginBottom: 8 }}>
+            {['all', 'vault', 'prediction', 'notification'].map(t => (
+              <button key={t} className={`cm-toggle${actTab === t ? ' active' : ''}`}
+                onClick={() => setActTab(t)} style={{ fontSize: '.62rem', textTransform: 'capitalize' }}>
+                {t === 'all' ? 'All' : t === 'vault' ? 'Vault' : t === 'prediction' ? 'Trades' : 'Alerts'}
+              </button>
+            ))}
+          </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {txRefreshing && <span className="spin" />}
             <button className="cm-toggle" onClick={async () => {
