@@ -90,4 +90,5 @@ export const NAV = [
   { id: "predict",     label: "Predict" },
   { id: "history",     label: "History" },
   { id: "leaderboard", label: "Leaderboard" },
+  { id: "admin",       label: "Admin" },
 ];
