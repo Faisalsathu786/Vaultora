@@ -30,12 +30,16 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
     const p = getProvider();
     const c = new ethers.Contract(PM_ADDRESS, abi, p);
     c.owner().then(owner => {
-      setIsOwner(owner.toLowerCase() === wallet.toLowerCase());
-      c.feeBps().then(f => setFeeBps(String(Number(f)))).catch(() => {});
-      c.minBet().then(m => setMinBet(String(Number(m)))).catch(() => {});
-      c.paused().then(p => setPaused(p)).catch(() => {});
-      c.getBranding().then(([l, n, d]) => { setLogo(l || ''); setSiteName(n || ''); setSiteDesc(d || ''); }).catch(() => {});
-    }).catch(() => {});
+      const match = owner.toLowerCase() === wallet.toLowerCase();
+      setIsOwner(match);
+      console.log('Admin: owner=' + owner.toLowerCase() + ' wallet=' + wallet.toLowerCase() + ' match=' + match);
+      if (match) {
+        c.feeBps().then(f => setFeeBps(String(Number(f)))).catch(() => {});
+        c.minBet().then(m => setMinBet(String(Number(m)))).catch(() => {});
+        c.paused().then(p => setPaused(p)).catch(() => {});
+        c.getBranding().then(([l, n, d]) => { setLogo(l || ''); setSiteName(n || ''); setSiteDesc(d || ''); }).catch(() => {});
+      }
+    }).catch(e => console.error('Owner check failed:', e));
   }, [wallet]);
 
   const run = async (label, fn) => {
@@ -54,7 +58,10 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
   if (!wallet) return null;
   if (!isOwner) return (
-    <div className="card"><p className="empty">Only contract owner can access this panel</p></div>
+    <div className="card">
+      <p className="empty">Only contract owner can access this panel</p>
+      <p style={{fontSize:'.6rem',color:'#777',textAlign:'center'}}>Connected: {wallet?.toLowerCase()} | Owner: check chain</p>
+    </div>
   );
 
   return (
