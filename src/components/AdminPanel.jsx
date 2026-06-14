@@ -20,6 +20,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [marketId, setMarketId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [resolvePick, setResolvePick] = useState({});
+  const [feeData, setFeeData] = useState(null);
 
   useEffect(() => {
     if (!wallet) return;
@@ -37,6 +38,23 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       }
     }).catch(e => console.error('Owner check failed:', e));
   }, [wallet]);
+
+  // Fetch pending fees
+  useEffect(() => {
+    if (!wallet || !isOwner) return;
+    const p = getProvider();
+    const c = new ethers.Contract(PM_ADDRESS, abi, p);
+    c.getTokens().then(async tokens => {
+      const data = [];
+      for (let i = 0; i < tokens.length; i++) {
+        try {
+          const amt = await c.pendingFees(tokens[i].addr);
+          if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: Number(ethers.formatUnits(amt, 6)) });
+        } catch {}
+      }
+      setFeeData(data.length > 0 ? data : []);
+    }).catch(() => setFeeData([]));
+  }, [wallet, isOwner]);
 
   const run = async (label, fn) => {
     setActionLoading(true);
@@ -160,18 +178,56 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
 
 
-      {tab === 'fees' && (
-        <div className="card">
-          <p className="card-lbl">Fee Withdrawal</p>
-          <p style={{ fontSize: '.68rem', color: '#777', marginBottom: 6 }}>Token index: 0 = USDC, 1 = EURC</p>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input className="num-input" placeholder="Token index" value={marketId}
-              onChange={e => setMarketId(e.target.value)} style={{ width: 80 }} />
-            <button className="btn-primary" style={{ fontSize: '.65rem' }} disabled={actionLoading || !marketId}
-              onClick={() => run('Withdraw fees', c => c.withdrawFees(Number(marketId)))}>Withdraw</button>
+      {tab === 'fees' && (() => {
+        const [feeData, setFeeData] = useState(null);
+        useEffect(() => {
+          if (!wallet) return;
+          const p = getProvider();
+          const c = new ethers.Contract(PM_ADDRESS, abi, p);
+          c.getTokens().then(async tokens => {
+            const data = [];
+            for (let i = 0; i < tokens.length; i++) {
+              try {
+                const amt = await c.pendingFees(tokens[i].addr);
+                if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: ethers.formatUnits(amt, 6) });
+              } catch {}
+            }
+            setFeeData(data);
+          }).catch(() => setFeeData([]));
+        }, [wallet]);
+
+  // Fetch pending fees
+  useEffect(() => {
+    if (!wallet || !isOwner) return;
+    const p = getProvider();
+    const c = new ethers.Contract(PM_ADDRESS, abi, p);
+    c.getTokens().then(async tokens => {
+      const data = [];
+      for (let i = 0; i < tokens.length; i++) {
+        try {
+          const amt = await c.pendingFees(tokens[i].addr);
+          if (amt > 0n) data.push({ idx: i, addr: tokens[i].addr, symbol: tokens[i].symbol, amount: Number(ethers.formatUnits(amt, 6)) });
+        } catch {}
+      }
+      setFeeData(data.length > 0 ? data : []);
+    }).catch(() => setFeeData([]));
+  }, [wallet, isOwner]);
+        return (
+          <div className="card">
+            <p className="card-lbl">Accumulated Fees</p>
+            {feeData === null ? <p className="empty">Loading...</p> : feeData.length === 0 ? (
+              <p className="empty">No fees available</p>
+            ) : feeData.map((f, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.05)' }}>
+                <span style={{ fontSize: '.72rem' }}>{f.symbol}: <b>{Number(f.amount).toFixed(2)}</b></span>
+                <button className="btn-primary" style={{ fontSize: '.6rem', padding: '3px 10px' }}
+                  disabled={actionLoading}
+                  onClick={() => run('Withdraw', c => c.withdrawFees(f.idx))}>Withdraw</button>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
