@@ -69,23 +69,51 @@ export function useSupabaseSync(wallet, getSigner) {
 
   // ── Mark notification as read ──
   const fetchTrades = useCallback(async (limit = 50) => {
-    if (!supabase || !wallet) return
+    if (!wallet) return
     try {
-      const { data } = await supabase.from('market_trades')
-        .select('*').eq('user_address', wallet.toLowerCase())
-        .order('created_at', { ascending: false }).limit(limit)
-      if (data) setTrades(data)
+      let trades = [];
+      // Try Supabase first
+      if (supabase) {
+        try {
+          const { data } = await supabase.from('market_trades')
+            .select('*').eq('user_address', wallet.toLowerCase())
+            .order('created_at', { ascending: false }).limit(limit)
+          if (data) trades = data;
+        } catch {}
+      }
+      // Merge localStorage fallback
+      try {
+        const key = 'vt_trades_' + wallet.toLowerCase();
+        const local = JSON.parse(localStorage.getItem(key) || '[]');
+        if (local.length > 0) {
+          const supIds = new Set(trades.map(t => t.tx_hash || t.id));
+          const newFromLocal = local.filter(t => !supIds.has(t.tx_hash || t.id));
+          trades = [...newFromLocal, ...trades].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, limit);
+        }
+      } catch {}
+      if (trades.length > 0) setTrades(trades);
     } catch { }
   }, [wallet])
 
   const syncTrade = useCallback(async (action, marketId, outcome, amount, tokenAmount, txHash) => {
     if (!supabase || !wallet) return
     try {
-      await supabase.from('market_trades').insert({
+      const row = {
         user_address: wallet.toLowerCase(), market_id: marketId,
         outcome, action, amount: String(amount || '0'),
         token_amount: String(tokenAmount || ''), tx_hash: txHash || null,
-      })
+        created_at: new Date().toISOString(),
+      }
+      try {
+        await supabase.from('market_trades').insert(row)
+      } catch {}
+      // Fallback: save to localStorage
+      try {
+        const key = 'vt_trades_' + wallet.toLowerCase();
+        const existing = JSON.parse(localStorage.getItem(key) || '[]');
+        existing.unshift(row);
+        localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)));
+      } catch {}
       fetchTrades()
     } catch (e) { console.error('syncTrade error:', e) }
   }, [wallet, fetchTrades])
