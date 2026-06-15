@@ -725,7 +725,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "s",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -981,6 +981,24 @@
       }
     ],
     "name": "setMarketImage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "q",
+        "type": "string"
+      }
+    ],
+    "name": "setMarketQuestion",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

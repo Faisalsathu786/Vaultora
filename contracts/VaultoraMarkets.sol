@@ -104,6 +104,11 @@ contract VaultoraMarkets {
         markets[id].image = url;
     }
 
+    function setMarketQuestion(uint256 id, string calldata q) external onlyOwner {
+        if (totalPool[id] > 0) revert InvalidMarket(); // can't edit if bets exist
+        markets[id].question = q;
+    }
+
     function setMarketCategory(uint256 id, string calldata cat) external onlyOwner {
         markets[id].category = cat;
     }
