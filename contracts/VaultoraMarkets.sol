@@ -210,9 +210,8 @@ contract VaultoraMarkets {
 
     // ═══════════════ MATH ═══════════════
 
-    function mintAmount(uint256 net, uint256 s) public pure returns (uint256) {
-        if (s == 0) return net;
-        return net * 200000 / (s + 200000);
+    function mintAmount(uint256 net, uint256 /* s */) public pure returns (uint256) {
+        return net; // 1:1 fair ratio — every $1 = 1 token, proportional at resolution
     }
 
     function redeemTax(uint256 timeLeft, uint256 tokenAmount, uint256 _supply) public pure returns (uint256) {
