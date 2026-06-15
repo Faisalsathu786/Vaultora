@@ -51,6 +51,15 @@ export default function Predict({
     return { value: currentValue, pct };
   };
 
+  const getPotentialPayout = (mId, outcome, balance) => {
+    const m = markets.find(x => x.id === mId);
+    if (!m || !m.supply || !m.totalPool) return 0;
+    const tp = Number(m.totalPool || 0);
+    const sup = Number(m.supply?.[outcome] || 0);
+    if (tp <= 0 || sup <= 0 || balance <= 0) return 0;
+    return Number(((BigInt(Math.floor(tp)) * BigInt(balance)) / BigInt(sup)).toString()) / 1e6;
+  };
+
   const handleSell = async (mId, outcome) => {
     let amt = Number(sellAmt);
     if (amt <= 0) {
@@ -163,13 +172,20 @@ export default function Predict({
                         const bal = Number(p.balances[oi] || 0);
                         if (bal <= 0) return null;
                         const pv = getPositionValue(m.id, oi, bal);
-                        const vCls = '#a78bfa';
+                        const pp = getPotentialPayout(m.id, oi, bal);
+                        const isWinner = m.resolved && oi === m.winningOutcome;
                         return (
-                          <span key={oi} className={`portfolio-opt ${m.resolved && oi === m.winningOutcome ? 'win' : ''}`}>
-                            <span>{opt}</span>
-                            <span style={{ color: vCls, marginLeft: 6, fontSize: '.62rem' }}>
-                              ${pv.value.toFixed(2)}
-                            </span>
+                          <span key={oi} className={`portfolio-opt ${isWinner ? 'win' : ''}`}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <span className="port-opt-label">{opt}</span>
+                              <span style={{ fontSize: '.58rem', color: '#888' }}>Now: <b style={{ color: '#a78bfa' }}>${pv.value.toFixed(2)}</b></span>
+                              {!m.resolved && pp > 0 && (
+                                <span style={{ fontSize: '.58rem', color: '#777' }}>If wins: <b style={{ color: '#34d399' }}>${pp.toFixed(2)}</b></span>
+                              )}
+                              {isWinner && (
+                                <span style={{ fontSize: '.58rem', color: '#34d399' }}>Won: <b>${pp.toFixed(2)}</b></span>
+                              )}
+                            </div>
                           </span>
                         );
                       })}

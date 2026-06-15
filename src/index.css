@@ -77,3 +77,15 @@ body { margin: 0; }
 .trade-status.closed {
   color: #666;
 }
+
+/* ── Portfolio Option Cards ── */
+.port-opt-label {
+  font-weight: 600;
+  font-size: .75rem;
+  color: var(--text);
+}
+.portfolio-opt {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 8px 10px;
+}
