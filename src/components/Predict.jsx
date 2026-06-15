@@ -158,68 +158,102 @@ export default function Predict({
                 onClick={() => { setPortTab('history'); if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>History</button>
 
             </div>
-{list.length === 0 ? (
+            {list.length === 0 ? (
               <p className="empty">No {portTab} positions</p>
             ) : list.map(e => {
               const m = e.market; const p = e.pos;
               const opts = m.options || [];
               const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
               return (
-                <div key={`p-${m.id}`} className="portfolio-row">
-                  <div className="portfolio-info" style={{ flex: 1 }}>
-                    <span className="portfolio-q">{m.question}</span>
-                    <div className="portfolio-options">
-                      {opts.map((opt, oi) => {
-                        const bal = Number(p.balances[oi] || 0);
-                        if (bal <= 0) return null;
-                        const pv = getPositionValue(m.id, oi, bal);
-                        const pp = getPotentialPayout(m.id, oi, bal);
-                        const isWinner = m.resolved && oi === m.winningOutcome;
-                        return (
-                          <span key={oi} className={`portfolio-opt ${isWinner ? 'win' : ''}`}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <span className="port-opt-label">{opt}</span>
-                              <span style={{ fontSize: '.58rem', color: '#888' }}>Now: <b style={{ color: '#a78bfa' }}>${pv.value.toFixed(2)}</b></span>
-                              {!m.resolved && pp > 0 && (
-                                <span style={{ fontSize: '.58rem', color: '#777' }}>If wins: <b style={{ color: '#34d399' }}>${pp.toFixed(2)}</b></span>
-                              )}
-                              {isWinner && (
-                                <span style={{ fontSize: '.58rem', color: '#34d399' }}>Won: <b>${pp.toFixed(2)}</b></span>
-                              )}
+                <div key={`p-${m.id}`} className="pos-card">
+                  <div className="pos-card-header">
+                    <span className="pos-card-mkt">#{m.id} {m.question}</span>
+                    <span className="pos-card-token">{tokSym}</span>
+                  </div>
+                  {opts.map((opt, oi) => {
+                    const bal = Number(p.balances[oi] || 0);
+                    if (bal <= 0) return null;
+                    const balDisplay = (bal / 1e6).toFixed(4);
+                    const pv = getPositionValue(m.id, oi, bal);
+                    const pp = getPotentialPayout(m.id, oi, bal);
+                    const isWinner = m.resolved && oi === m.winningOutcome;
+                    const selKey = `${m.id}_${oi}`;
+                    const isSel = sellSel === selKey;
+                    return (
+                      <div key={oi} className="pos-item">
+                        <div className="pos-item-main" onClick={() => {
+                          if (!m.resolved && m.secsLeft > 0) {
+                            setSellSel(isSel ? null : selKey);
+                            setSellAmt('');
+                            if (!isSel) {
+                              const b = (Number(p.balances[oi] || 0) / 1e6).toFixed(4);
+                              setSellAmt(b);
+                            }
+                          }
+                        }}>
+                          <div className="pos-item-left">
+                            <span className="pos-item-outcome">{opt}</span>
+                            <span className="pos-item-bal">{balDisplay} tokens</span>
+                          </div>
+                          <div className="pos-item-right">
+                            <span className="pos-item-val">Now: <b style={{color:'#a78bfa'}}>${pv.value.toFixed(2)}</b></span>
+                            {!m.resolved && pp > 0 && (
+                              <span className="pos-item-payout">If wins: <b style={{color:'#34d399'}}>${pp.toFixed(2)}</b></span>
+                            )}
+                            {isWinner && (
+                              <span className="pos-item-payout" style={{color:'#34d399'}}>Won: <b>${pp.toFixed(2)}</b></span>
+                            )}
+                          </div>
+                        </div>
+                        {isSel && !m.resolved && (
+                          <div className="pos-sell-inline">
+                            <div className="pos-sell-row">
+                              <input className="pos-sell-input" type="number" placeholder="0.00"
+                                value={sellAmt} onChange={e => setSellAmt(e.target.value)} />
+                              <button className="pos-max-btn" onClick={() => {
+                                setSellAmt(String((Number(p.balances[oi] || 0) / 1e6).toFixed(4)));
+                              }}>MAX</button>
                             </div>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="portfolio-action">
-                    {m.resolved ? (
-                      <button className="btn-primary" style={{ fontSize: '.68rem', padding: '3px 10px' }}
-                        onClick={async () => {
-                          const ok = await claimWinnings(m.id);
-                          notify(ok ? 'Claimed!' : 'Failed', ok ? 'success' : 'error');
-                        }}>
-                        Claim
-                      </button>
-                    ) : m.secsLeft <= 0 ? (
-                      <span style={{ color: '#fbbf24', fontSize: '.65rem' }}>Pending</span>
-                    ) : (
-                      <button className="btn-secondary" style={{ fontSize: '.65rem', padding: '3px 8px' }}
-                        onClick={async () => {
-                          setActiveMktId(m.id); setActionTab('sell');
-                          setMarketTab('active');
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }}>
-                        Sell
-                      </button>
-                    )}
-                  </div>
+                            <button className="pos-sell-confirm"
+                              onClick={async () => {
+                                if (!sellAmt || Number(sellAmt) <= 0) { notify('Enter amount', 'error'); return; }
+                                const mkt = markets.find(x => x.id === m.id);
+                                const pool = Number(mkt?.pool?.[oi] || 0);
+                                const supply = Number(mkt?.supply?.[oi] || 1);
+                                const rawAmt = Number(sellAmt) * 1e6;
+                                const share = Math.min(rawAmt, bal);
+                                const gross = pool > 0 && supply > 0 ? (pool * share) / supply / 1e6 : 0;
+                                const fee = gross * 0.008;
+                                const tax = Math.min(gross * 0.3, gross * 0.3);
+                                const net = Math.max(0, gross - fee - tax);
+                                if (!confirm('Sell ' + sellAmt + ' ' + opt + '? You receive: —' + net.toFixed(2) + ' USDC')) return;
+                                const ok = await sellTokens(m.id, oi, Number(sellAmt));
+                                if (ok) { notify('Sold!', 'success'); setSellAmt(''); setSellSel(null); fetchMarkets(); }
+                                else notify('Sell failed', 'error');
+                              }}>
+                              Sell {opt}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {m.resolved && (
+                    <button className="pos-claim-btn"
+                      onClick={async () => {
+                        const ok = await claimWinnings(m.id);
+                        notify(ok ? 'Claimed!' : 'Claim failed', ok ? 'success' : 'error');
+                      }}>
+                      Claim Winnings
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
         );
       })()}
+
 
       {portTab === 'history' && (
         <div className="card" style={{ marginTop: 12 }}>
