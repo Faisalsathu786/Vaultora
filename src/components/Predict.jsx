@@ -144,6 +144,8 @@ export default function Predict({
                 onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
               <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
                 onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
+              <button className={`cm-toggle ${portTab === 'history' ? 'active' : ''}`}
+                onClick={() => { setPortTab('history'); if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>History</button>
 
             </div>
 {list.length === 0 ? (
@@ -201,6 +203,63 @@ export default function Predict({
           </div>
         );
       })()}
+
+      {portTab === 'history' && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="lb-top">
+            <p className="card-lbl">Trade History</p>
+            <button className="cm-toggle" onClick={() => { if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>
+              Refresh
+            </button>
+          </div>
+          {!wallet ? (
+            <p className="empty">Connect wallet to see history</p>
+          ) : !supabaseData?.trades || supabaseData.trades.length === 0 ? (
+            <p className="empty">No trades yet</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="trade-table">
+                <thead>
+                  <tr>
+                    <th>Market</th>
+                    <th>Type</th>
+                    <th>Outcome</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supabaseData.trades.slice(0, 50).map((tx, i) => {
+                    const isBuy = tx.action === 'buy';
+                    const isSell = tx.action === 'sell';
+                    const isClaim = tx.action === 'claim';
+                    const outcomeNum = Number(tx.outcome) + 1;
+                    return (
+                      <tr key={tx.tx_hash || tx.id || i}>
+                        <td className="td-mkt">#{tx.market_id || '—'}</td>
+                        <td>
+                          <span className={`trade-badge ${isBuy ? 'buy' : isSell ? 'sell' : 'claim'}`}>
+                            {isBuy ? 'BUY' : isSell ? 'SELL' : 'CLAIM'}
+                          </span>
+                        </td>
+                        <td className="td-outcome">Out {outcomeNum}</td>
+                        <td className="td-amt">{Number(tx.amount || 0).toFixed(2)} USDC</td>
+                        <td>
+                          <span className={`trade-status ${isBuy ? 'open' : 'closed'}`}>
+                            {isBuy ? 'Open' : isSell ? 'Sold' : 'Claimed'}
+                          </span>
+                        </td>
+                        <td className="td-time">{tx.created_at ? new Date(tx.created_at).toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }) : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {mkLoading ? (
         <p className="empty">Loading markets...</p>
