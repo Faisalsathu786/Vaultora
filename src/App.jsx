@@ -366,19 +366,9 @@ export default function App() {
           )}
 
           {page === "history" && (
-            <History wallet={wallet} txHistory={txHistory} fetchOnChainHistory={fetchOnChainHistory}
-              pmTxHistory={pmTxHistory} pmTxLoading={pmTxLoading}
-              pmTxPage={pmTxPage} setPmTxPage={setPmTxPage}
-              PM_TX_PAGE_SIZE={PM_TX_PAGE_SIZE}
-              fetchPmTxHistory={predData.fetchPmTxHistory}
-              claimWinningsOnChain={claimWinningsOnChain}
-              notify={showToast} getSigner={getSigner}
-              supabaseData={supabaseData}
-              supabaseNotifications={supabaseData.notifications}
-              supabaseUnreadCount={supabaseData.unreadCount}
-              supabaseFetchNotifications={supabaseData.fetchNotifications}
-              supabaseMarkRead={supabaseData.markRead}
-              supabaseMarkAllRead={supabaseData.markAllRead} />
+            <History wallet={wallet} txHistory={txHistory}
+              fetchOnChainHistory={fetchOnChainHistory}
+              supabaseData={supabaseData} />
           )}
 
           {page === "admin" && (

@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { PM_ADDRESS, PM_ABI } from '../constants/contracts.js';
 
 export default function History({
-  wallet, txHistory, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
-  PM_TX_PAGE_SIZE, fetchPmTxHistory, fetchOnChainHistory, claimWinningsOnChain, notify, getSigner,
-  supabaseNotifications, supabaseUnreadCount, supabaseFetchNotifications, supabaseMarkRead, supabaseMarkAllRead,
+  wallet, txHistory, fetchOnChainHistory,
   supabaseData,
 }) {
   const [txRefreshing, setTxRefreshing] = useState(false);
   const [supabaseTxs, setSupabaseTxs] = useState([]);
-  
 
   // Merge local + Supabase vault deposits for cross-device history
   const mergedVaultTxs = supabaseTxs.length > 0
@@ -43,8 +38,6 @@ export default function History({
       })
       .catch(() => {});
   }, [wallet, supabaseData]);
-
-
   return (
     <div className="pg">
       <div className="card">
@@ -56,7 +49,6 @@ export default function History({
               if (!wallet || txRefreshing) return;
               setTxRefreshing(true);
               try { if (fetchOnChainHistory) await fetchOnChainHistory(wallet); } catch {}
-              if (supabaseData?.fetchTrades) supabaseData.fetchTrades();
               setTxRefreshing(false);
             }} disabled={txRefreshing}>
               Refresh
@@ -80,126 +72,6 @@ export default function History({
         }
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="lb-top">
-          <p className="card-lbl">Prediction Market History</p>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {pmTxLoading && <span className="spin" />}
-            <button className="cm-toggle" onClick={() => wallet && fetchPmTxHistory(wallet)}
-              disabled={pmTxLoading}>
-              Refresh
-            </button>
-          </div>
-        </div>
-        {!wallet ? <p className="empty">Connect wallet</p>
-        : pmTxLoading ? <div className="empty"><span className="spin" /> Loading...</div>
-        : pmTxHistory.length === 0 ? <p className="empty">No bets yet</p>
-        : <>
-          {/* Summary */}
-          {(() => {
-            const resolved = pmTxHistory.filter(t => ["won","won-unclaimed","lost"].includes(t.resultClass));
-            const won = resolved.filter(t => ["won","won-unclaimed"].includes(t.resultClass));
-            const lost = resolved.filter(t => t.resultClass==="lost");
-            const total = pmTxHistory.reduce((s,t)=>s+parseFloat(t.amount),0);
-            return <div className="pmhist-summary">
-              <div className="pmhist-stat"><span className="pmhist-stat-val">{pmTxHistory.length}</span><span className="pmhist-stat-lbl">Total Bets</span></div>
-              <div className="pmhist-stat"><span className="pmhist-stat-val green">{won.length}</span><span className="pmhist-stat-lbl">Won</span></div>
-              <div className="pmhist-stat"><span className="pmhist-stat-val red">{lost.length}</span><span className="pmhist-stat-lbl">Lost</span></div>
-              <div className="pmhist-stat"><span className="pmhist-stat-val">{total.toFixed(1)}</span><span className="pmhist-stat-lbl">Staked</span></div>
-            </div>;
-          })()}
-
-          {pmTxHistory.slice(pmTxPage*PM_TX_PAGE_SIZE, (pmTxPage+1)*PM_TX_PAGE_SIZE).map((t,i)=>(
-            <div key={i} className={`pmhist-row ${t.resultClass}`}>
-              <div className="pmhist-left">
-                <span className="pmhist-badge">{t.resultClass==="won"&&"W"}{t.resultClass==="won-unclaimed"&&"W"}{t.resultClass==="lost"&&"L"}{t.resultClass==="pending"&&"P"}{t.resultClass==="refund"&&"R"}</span>
-                <div className="pmhist-detail">
-                  <span className="pmhist-question">#{t.marketId} {t.question}</span>
-                  <span className="pmhist-meta">Picked: <b>{t.outcome}</b> {new Date(t.timestamp*1e3).toLocaleString()}</span>
-                </div>
-              </div>
-              <div className="pmhist-right">
-                <span className={`pmhist-amt ${t.resultClass}`}>{t.resultClass==="lost"?"-":""}{t.amount} {t.tokenSym}</span>
-                <span className={`pmhist-result ${t.resultClass}`}>{t.result}</span>
-                {t.resultClass==="won-unclaimed" &&
-                  <button className="btn-primary" style={{fontSize:".72rem",padding:"4px 10px",marginTop:4}}
-                    onClick={()=>claimWinningsOnChain(t.marketId)}>Claim</button>}
-                {t.resultClass==="refund" &&
-                  <button className="btn-primary" style={{fontSize:".72rem",padding:"4px 10px",marginTop:4,background:"#fbbf24",color:"#000"}}
-                    onClick={async()=>{try{const s=await getSigner();const pm=new ethers.Contract(PM_ADDRESS,PM_ABI,s);await(await pm.refundCancelled(t.marketId,t.betIndex)).wait();notify("Refund claimed!","success");fetchPmTxHistory(wallet);
-                if (supabaseData?.fetchTrades) supabaseData.fetchTrades();}catch(e){notify((e?.reason||"Refund failed").slice(0,100),"error");}}}>Refund</button>}
-              </div>
-            </div>
-          ))}
-
-          {pmTxHistory.length>PM_TX_PAGE_SIZE&&<div className="pmhist-pagination">
-            <button className="cm-toggle" disabled={pmTxPage===0} onClick={()=>setPmTxPage(p=>p-1)}>Prev</button>
-            <span style={{fontSize:".8rem",color:"var(--sub)"}}>Page {pmTxPage+1}/{Math.ceil(pmTxHistory.length/PM_TX_PAGE_SIZE)}</span>
-            <button className="cm-toggle" disabled={(pmTxPage+1)*PM_TX_PAGE_SIZE>=pmTxHistory.length} onClick={()=>setPmTxPage(p=>p+1)}>Next</button>
-          </div>}
-        </>}
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="lb-top">
-          <p className="card-lbl">
-            Notifications
-            {supabaseUnreadCount > 0 && <span className="mkt-tab-badge claim" style={{ marginLeft: 8 }}>{supabaseUnreadCount}</span>}
-          </p>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {supabaseUnreadCount > 0 && (
-              <button className="cm-toggle" onClick={() => supabaseMarkAllRead && supabaseMarkAllRead()}>
-                Mark All Read
-              </button>
-            )}
-            <button className="cm-toggle" onClick={() => supabaseFetchNotifications && supabaseFetchNotifications()}>
-              Refresh
-            </button>
-          </div>
-        </div>
-        {!supabaseData?.trades || supabaseData.trades.length === 0 ? null : (
-          <div style={{marginTop: 8}}>
-            <p className="card-lbl">Prediction Trades</p>
-            {supabaseData.trades.slice(0, 20).map((tx, i) => (
-              <div key={i} className="tx-row">
-                <div className={`tx-icon ${tx.action === 'buy' ? 'in' : 'out'}`}>
-                  {tx.action === 'buy' ? 'B' : tx.action === 'sell' ? 'S' : 'C'}
-                </div>
-                <div className="tx-detail">
-                  <span className="tx-type">{tx.action === 'buy' ? 'Buy' : tx.action === 'sell' ? 'Sell' : 'Claim'}</span>
-                  <span className="tx-time">{new Date(tx.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" })}</span>
-                </div>
-                <div className="tx-amount">
-                  <span style={{color: tx.action === 'buy' ? '#34d399' : '#f87171'}}>
-                    {tx.action === 'buy' ? '+' : '-'}{Number(tx.amount || 0).toFixed(2)}
-                  </span>
-                  <span style={{fontSize:'.6rem',color:'#777',display:'block'}}>Market #{tx.market_id} · Out {Number(tx.outcome) + 1}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!wallet ? <p className="empty">Connect wallet to see notifications</p>
-        : !supabaseNotifications || supabaseNotifications.length === 0 ? <p className="empty">No notifications yet</p>
-        : supabaseNotifications.map(n => (
-          <div key={n.id} className={`pmhist-row ${n.read ? '' : 'pending'}`} style={{ cursor: n.read ? 'default' : 'pointer', opacity: n.read ? 0.6 : 1 }}
-            onClick={() => !n.read && supabaseMarkRead && supabaseMarkRead(n.id)}>
-            <div className="pmhist-left">
-              <span className="pmhist-badge">{n.type === 'win' ? '🎉' : n.type === 'lose' ? '😔' : '📢'}</span>
-              <div className="pmhist-detail">
-                <span className="pmhist-question">{n.title}</span>
-                <span className="pmhist-meta">{n.body}</span>
-              </div>
-            </div>
-            <div className="pmhist-right">
-              <span className="pmhist-result">{n.created_at ? new Date(n.created_at).toLocaleDateString() : ''}</span>
-              {!n.read && <span className="pmhist-badge" style={{ fontSize: '.65rem' }}>NEW</span>}
-            </div>
-          </div>
-        ))
-        }
-      </div>
     </div>
   );
 }
