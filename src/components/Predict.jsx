@@ -39,9 +39,7 @@ export default function Predict({
     if (ok) {
       notify('Bought!', 'success'); fetchMarkets();
       if (supabaseData?.syncTrade) supabaseData.syncTrade('buy', mId, outcome, betAmt, '0');
-      if (syncBet && wallet) {
-        syncBet(mId, wallet, outcome, betAmt, Date.now(), '');
-      }
+      if (syncBet && wallet) syncBet(mId, wallet, outcome, betAmt, Date.now(), '');
     } else notify('Buy failed', 'error');
   };
 
