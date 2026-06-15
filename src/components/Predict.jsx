@@ -477,8 +477,7 @@ export default function Predict({
         );
       })}
 
-      <PredictLeaderboard wallet={wallet} supabaseLbData={supabaseLbData} supabase={supabase}
-        supabaseData={supabaseData} />
+      <PredictLeaderboard wallet={wallet} />
     </div>
   );
 }

@@ -1,73 +1,120 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import { ethers } from 'ethers';
+import { PM_ADDRESS } from '../constants/contracts.js';
+import implAbi from '../../contracts/VaultoraMarkets.json';
 import { trimAddr } from '../utils/format.js';
 
+const RPC = 'https://rpc.testnet.arc.network';
+
 export default function PredictLeaderboard({ wallet, supabaseLbData, supabase }) {
-  const [localLb, setLocalLb] = useState([]);
+  const [traders, setTraders] = useState([]);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const channelRef = useRef(null);
-  const fetchedRef = useRef(false);
 
-  const rawLbData = supabaseLbData.length > 0 ? supabaseLbData : localLb;
+  const computeLeaderboard = async () => {
+    try {
+      const provider = new ethers.JsonRpcProvider(RPC);
+      const pm = new ethers.Contract(PM_ADDRESS, implAbi, provider);
+      const mktCount = Number(await pm.marketCount());
+      if (mktCount === 0) return;
 
-  const normalised = rawLbData.map(u => ({
-    address: (u.user_address || u.address || '').toLowerCase(),
-    totalBets: u.total_bets || u.totalBets || 0,
-    totalStaked: u.total_staked || u.totalStaked || 0,
-    totalWon: u.total_won || u.totalWon || 0,
-    wins: u.wins || 0,
-    losses: u.losses || 0,
-    winRate: u.win_rate || u.winRate || 0,
-    profit: u.profit || 0,
-    resolvedTotal: (u.wins || 0) + (u.losses || 0),
-  }));
-
-  // Sort by profit desc
-  const sorted = [...normalised].sort((a, b) => b.profit - a.profit);
-
-  useEffect(() => {
-    if (fetchedRef.current || !supabase || supabaseLbData.length > 0) return;
-    fetchedRef.current = true;
-    supabase.from('user_stats')
-      .select('*').gt('total_bets', 0)
-      .order('total_bets', { ascending: false }).limit(100)
-      .then(({ data }) => { if (data) { setLocalLb(data); setLastUpdate(Date.now()); } })
-      .catch(() => {});
-  }, [supabase]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    const channel = supabase
-      .channel('lb-live')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'user_stats' },
-        async () => {
-          const { data } = await supabase
-            .from('user_stats').select('*').gt('total_bets', 0)
-            .order('total_bets', { ascending: false }).limit(100);
-          if (data) { setLocalLb(data); setLastUpdate(Date.now()); }
+      // Collect all user trades from localStorage
+      const userMap = {};
+      const scanStorage = () => {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k === 'vt_trades_' || !k.startsWith('vt_trades_')) continue;
+          try {
+            const trades = JSON.parse(localStorage.getItem(k) || '[]');
+            const addr = k.replace('vt_trades_', '');
+            for (const t of trades) {
+              if (!userMap[addr]) userMap[addr] = { bets: 0, staked: 0, won: 0, wins: 0, losses: 0 };
+              userMap[addr].bets += 1;
+              userMap[addr].staked += Number(t.amount || 0);
+              if (t.action === 'claim' || t.action === 'win') {
+                userMap[addr].won += Number(t.amount || 0);
+                userMap[addr].wins += 1;
+              } else if (t.action === 'lose') {
+                userMap[addr].losses += 1;
+              }
+            }
+          } catch {}
         }
-      ).subscribe();
-    channelRef.current = channel;
-    return () => { supabase.removeChannel(channel); };
-  }, [supabase]);
+      };
+      scanStorage();
+
+      // For the current user: add on-chain positions
+      if (wallet) {
+        const addr = wallet.toLowerCase();
+        if (!userMap[addr]) userMap[addr] = { bets: 0, staked: 0, won: 0, wins: 0, losses: 0 };
+        // Count on-chain positions as bets
+        for (let mid = 0; mid < mktCount; mid++) {
+          try {
+            const pos = await pm.getPosition(mid, wallet);
+            const m = await pm.getMarket(mid);
+            const hasBal = pos.balances.some(b => Number(b) > 0);
+            if (hasBal) {
+              userMap[addr].bets += 1;
+              // total staked from supply/pools
+              let totalStaked = 0;
+              for (let oi = 0; oi < m.options.length; oi++) {
+                const bal = Number(pos.balances[oi]);
+                if (bal > 0) {
+                  const s = Number(await pm.supply(mid, oi));
+                  const p = Number(await pm.pools(mid, oi));
+                  totalStaked += s > 0 ? (p * bal) / s : 0;
+                }
+              }
+              userMap[addr].staked += totalStaked / 1e6;
+              // Check if resolved + won
+              if (Number(m.status) === 1) { // resolved
+                if (Number(pos.balances[Number(m.winningOutcome)]) > 0) {
+                  userMap[addr].wins += 1;
+                } else {
+                  userMap[addr].losses += 1;
+                }
+              }
+            }
+          } catch {}
+        }
+      }
+
+      const entries = Object.entries(userMap).map(([addr, d]) => ({
+        address: addr,
+        totalBets: d.bets,
+        totalStaked: d.staked,
+        wins: d.wins,
+        losses: d.losses,
+        winRate: d.wins + d.losses > 0 ? Math.round(d.wins / (d.wins + d.losses) * 100) : 0,
+        profit: d.won - d.staked,
+      })).filter(e => e.totalBets > 0);
+
+      entries.sort((a, b) => b.profit - a.profit);
+      setTraders(entries);
+      setLastUpdate(Date.now());
+    } catch (e) { console.error('LB error:', e); }
+  };
+
+  useEffect(() => { computeLeaderboard(); }, [wallet]);
+
+  // Auto-refresh every 5s
+  useEffect(() => {
+    const t = setInterval(() => computeLeaderboard(), 5000);
+    return () => clearInterval(t);
+  }, [wallet]);
 
   const formatProfit = (v) => {
     if (v === 0) return '$0.00';
-    const s = v > 0 ? '+' : '';
-    return `${s}$${Math.abs(v).toFixed(2)}`;
+    return `${v > 0 ? '+' : ''}$${Math.abs(v).toFixed(2)}`;
   };
-
   const formatVol = (v) => {
     if (v < 0.01) return '$0';
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}K`;
     return `$${v.toFixed(2)}`;
   };
-
   const timeAgo = () => {
-    const secs = Math.floor((Date.now() - lastUpdate) / 1000);
-    if (secs < 5) return 'just now';
-    if (secs < 60) return `${secs}s ago`;
-    return `${Math.floor(secs / 60)}m ago`;
+    const s = Math.floor((Date.now() - lastUpdate) / 1000);
+    if (s < 5) return 'just now';
+    return s < 60 ? `${s}s ago` : `${Math.floor(s / 60)}m ago`;
   };
 
   return (
@@ -76,54 +123,33 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
         <p className="card-lbl">Leaderboard</p>
         <div className="lb-live-indicator">
           <span className="lb-live-dot" />
-          <span className="lb-live-text">Live · {timeAgo()}</span>
+          <span className="lb-live-text">Live · {timeAgo()} · auto-refresh 5s</span>
         </div>
       </div>
-
-      {sorted.length === 0 ? (
-        <p className="empty">No prediction data yet. Place a bet to appear here!</p>
+      {traders.length === 0 ? (
+        <p className="empty">No trades yet. Place a bet to appear!</p>
       ) : (
         <>
-          {/* Top 3 Podium */}
           <div className="lb-podium">
-            {sorted.slice(0, 3).map((u, idx) => (
+            {traders.slice(0, 3).map((u, idx) => (
               <div key={u.address} className={`lb-podium-card ${['gold','silver','bronze'][idx]}`}>
                 <div className="lb-podium-rank">{['🥇','🥈','🥉'][idx]}</div>
-                <div className="lb-podium-addr">
-                  {u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}
-                </div>
-                <div className="lb-podium-pnl" style={{ color: u.profit >= 0 ? '#34d399' : '#f87171' }}>
-                  {formatProfit(u.profit)}
-                </div>
+                <div className="lb-podium-addr">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</div>
+                <div className="lb-podium-pnl" style={{ color: u.profit >= 0 ? '#34d399' : '#f87171' }}>{formatProfit(u.profit)}</div>
                 <div className="lb-podium-vol">Vol: {formatVol(u.totalStaked)}</div>
               </div>
             ))}
           </div>
-
-          {/* Table */}
           <div className="lb-table-wrap">
             <table className="lb-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Trader</th>
-                  <th>Volume</th>
-                  <th>PnL</th>
-                  <th>Win Rate</th>
-                  <th>Bets</th>
-                </tr>
-              </thead>
+              <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>PnL</th><th>Win Rate</th><th>Bets</th></tr></thead>
               <tbody>
-                {sorted.map((u, idx) => (
+                {traders.map((u, idx) => (
                   <tr key={u.address} className={u.address === wallet?.toLowerCase() ? 'is-you' : ''}>
                     <td className="lb-rank">{idx + 1}</td>
-                    <td className="lb-trader">
-                      {u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}
-                    </td>
+                    <td className="lb-trader">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</td>
                     <td className="lb-num">{formatVol(u.totalStaked)}</td>
-                    <td className="lb-pnl" style={{ color: u.profit > 0 ? '#34d399' : u.profit < 0 ? '#f87171' : '#888' }}>
-                      {formatProfit(u.profit)}
-                    </td>
+                    <td className="lb-pnl" style={{ color: u.profit > 0 ? '#34d399' : u.profit < 0 ? '#f87171' : '#888' }}>{formatProfit(u.profit)}</td>
                     <td className="lb-num">{u.winRate}%</td>
                     <td className="lb-num">{u.totalBets}</td>
                   </tr>
@@ -131,10 +157,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </tbody>
             </table>
           </div>
-
-          <div className="lb-footer">
-            <span>{sorted.length} predictors</span>
-          </div>
+          <div className="lb-footer"><span>{traders.length} predictors · on-chain</span></div>
         </>
       )}
     </div>
