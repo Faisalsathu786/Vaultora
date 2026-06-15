@@ -221,11 +221,17 @@ export default function Predict({
                               }}>Sell {opt}</button>
                             </div>
                           )}
-                          {m.resolved && (
-                            <button className="pos-claim-btn" onClick={async () => {
+                          {m.resolved && isWinner && (
+                            <button className="pos-claim-btn" style={{
+                              background: '#000', color: '#fff', border: '2px solid var(--accent)',
+                              fontWeight: 700, letterSpacing: '.05em'
+                            }} onClick={async () => {
                               const ok = await claimWinnings(m.id);
                               notify(ok ? "Claimed!" : "Claim failed", ok ? "success" : "error");
-                            }}>Claim Winnings</button>
+                            }}>Claim</button>
+                          )}
+                          {m.resolved && !isWinner && (
+                            <div className="pos-lost-badge">Lost</div>
                           )}
                         </div>
                       );
