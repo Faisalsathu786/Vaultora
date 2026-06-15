@@ -111,19 +111,13 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}K`;
     return `$${v.toFixed(2)}`;
   };
-  const timeAgo = () => {
-    const s = Math.floor((Date.now() - lastUpdate) / 1000);
-    if (s < 5) return 'just now';
-    return s < 60 ? `${s}s ago` : `${Math.floor(s / 60)}m ago`;
-  };
-
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div className="lb-top">
         <p className="card-lbl">Leaderboard</p>
         <div className="lb-live-indicator">
           <span className="lb-live-dot" />
-          <span className="lb-live-text">Live · {timeAgo()} · auto-refresh 5s</span>
+          <span className="lb-live-text">Live</span>
         </div>
       </div>
       {traders.length === 0 ? (
@@ -157,7 +151,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </tbody>
             </table>
           </div>
-          <div className="lb-footer"><span>{traders.length} predictors · on-chain</span></div>
+          
         </>
       )}
     </div>
