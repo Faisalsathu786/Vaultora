@@ -89,3 +89,131 @@ body { margin: 0; }
   align-items: flex-start;
   padding: 8px 10px;
 }
+
+/* ── Position Cards with Inline Sell ── */
+.pos-card {
+  background: rgba(255,255,255,.02);
+  border: 1px solid #1a1a1a;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.pos-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1a1a1a;
+}
+.pos-card-mkt {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.pos-card-token {
+  font-size: .6rem;
+  color: var(--sub);
+  background: rgba(172,170,255,.08);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.pos-item {
+  border-bottom: 1px solid #111;
+  padding: 6px 0;
+}
+.pos-item:last-child { border-bottom: none; }
+.pos-item-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background .15s;
+}
+.pos-item-main:hover { background: rgba(172,170,255,.04); }
+.pos-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pos-item-outcome {
+  font-weight: 600;
+  font-size: .78rem;
+  color: var(--text);
+  min-width: 90px;
+}
+.pos-item-bal {
+  font-size: .62rem;
+  color: #888;
+  font-family: monospace;
+}
+.pos-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.pos-item-val {
+  font-size: .65rem;
+  color: #888;
+}
+.pos-item-payout {
+  font-size: .6rem;
+  color: #777;
+}
+.pos-sell-inline {
+  margin-top: 6px;
+  padding: 8px;
+  background: rgba(172,170,255,.04);
+  border-radius: 6px;
+  border: 1px solid rgba(172,170,255,.1);
+}
+.pos-sell-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.pos-sell-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #222;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: .75rem;
+}
+.pos-max-btn {
+  background: rgba(172,170,255,.1);
+  color: var(--accent);
+  border: 1px solid rgba(172,170,255,.2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: .7rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.pos-sell-confirm {
+  width: 100%;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 7px;
+  border-radius: 6px;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-claim-btn {
+  width: 100%;
+  margin-top: 8px;
+  background: linear-gradient(135deg, var(--purple), var(--accent));
+  color: #000;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: .72rem;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -25,6 +25,7 @@ export default function Predict({
   const [mktImages, setMktImages] = useState({});
   const [sellPreview, setSellPreview] = useState(null);
   const [portTab, setPortTab] = useState('active'); // active | pending | settled
+  const [sellSel, setSellSel] = useState(null); // "mktId_outcome"
 
   const uploadImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
