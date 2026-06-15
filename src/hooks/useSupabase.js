@@ -96,7 +96,7 @@ export function useSupabaseSync(wallet, getSigner) {
   }, [wallet])
 
   const syncTrade = useCallback(async (action, marketId, outcome, amount, tokenAmount, txHash) => {
-    if (!supabase || !wallet) return
+    if (!wallet) return
     try {
       const row = {
         user_address: wallet.toLowerCase(), market_id: marketId,
@@ -104,15 +104,16 @@ export function useSupabaseSync(wallet, getSigner) {
         token_amount: String(tokenAmount || ''), tx_hash: txHash || null,
         created_at: new Date().toISOString(),
       }
-      try {
-        await supabase.from('market_trades').insert(row)
-      } catch {}
-      // Fallback: save to localStorage
+      // Save to localStorage (works without Supabase)
       try {
         const key = 'vt_trades_' + wallet.toLowerCase();
         const existing = JSON.parse(localStorage.getItem(key) || '[]');
         existing.unshift(row);
         localStorage.setItem(key, JSON.stringify(existing.slice(0, 100)));
+      } catch {}
+      // Also try Supabase if available
+      try {
+        if (supabase) await supabase.from('market_trades').insert(row)
       } catch {}
       fetchTrades()
     } catch (e) { console.error('syncTrade error:', e) }
