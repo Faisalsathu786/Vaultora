@@ -292,9 +292,9 @@ export default function Predict({
 
         return (
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}>
-            {mktImages[mId] && (
+            {m.image && (
               <div className="mkt-img-wrap">
-                <img src={mktImages[mId]} alt="" className="mkt-img"
+                <img src={m.image} alt="" className="mkt-img"
                   onError={e => e.target.parentElement.style.display = 'none'} />
               </div>
             )}

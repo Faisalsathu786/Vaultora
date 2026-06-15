@@ -54,7 +54,7 @@ export function usePredictionData(wallet, getSigner) {
           endTime: Number(m.endTime), status: Number(m.status),
           tokenIdx: Number(m.tokenIdx), winningOutcome: Number(m.winningOutcome),
           secsLeft, cancelled: Number(m.status) === 2, resolved: Number(m.status) === 1,
-          supply, pool, totalPool: tp,
+          image: m.image, supply, pool, totalPool: tp,
         });
       }
       setMarkets(results);
@@ -122,7 +122,15 @@ export function usePredictionData(wallet, getSigner) {
       const c = new ethers.Contract(PM_ADDRESS, abi, signer);
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
-      await (await c.createMarket(newMkt.question, opts, endTime, newMkt.token)).wait();
+      const tx = await c.createMarket(newMkt.question, opts, endTime, newMkt.token);
+      await tx.wait();
+      // Save image on-chain if provided
+      if (newMkt.imageUrl) {
+        try {
+          const count = Number(await c.marketCount());
+          await (await c.setMarketImage(count - 1, newMkt.imageUrl)).wait();
+        } catch (e) { console.error('Image save error:', e); }
+      }
       setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
       setShowCreateForm(false); fetchMarkets();
       return true;
