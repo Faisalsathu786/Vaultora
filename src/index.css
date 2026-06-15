@@ -217,3 +217,37 @@ body { margin: 0; }
   font-weight: 600;
   cursor: pointer;
 }
+
+/* ── Leaderboard Live ── */
+.lb-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.lb-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: lb-pulse 1.5s ease-in-out infinite;
+}
+@keyframes lb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.lb-live-text {
+  font-size: .6rem;
+  color: #888;
+}
+.lb-rank { text-align: center; font-weight: 600; font-size: .75rem; }
+.lb-trader { font-size: .72rem; }
+.lb-num { text-align: right; font-family: monospace; font-size: .72rem; }
+.lb-pnl { text-align: right; font-family: monospace; font-size: .72rem; font-weight: 600; }
+.lb-table-wrap { overflow-x: auto; }
+.lb-table { width: 100%; border-collapse: collapse; }
+.lb-table th { text-align: left; padding: 8px 6px; font-size: .6rem; color: #666; text-transform: uppercase; border-bottom: 1px solid #1a1a1a; }
+.lb-table th:last-child, .lb-table th:nth-child(3),
+.lb-table th:nth-child(4), .lb-table th:nth-child(5), .lb-table th:nth-child(6) { text-align: right; }
+.lb-table td { padding: 9px 6px; border-bottom: 1px solid #111; font-size: .72rem; }
+.lb-table tr.is-you { background: rgba(172,170,255,.05); }
+.lb-table tr.is-you td:first-child { border-left: 2px solid var(--accent); }
+.lb-footer { margin-top: 8px; text-align: center; font-size: .6rem; color: #555; }
