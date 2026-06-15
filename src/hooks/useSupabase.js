@@ -171,9 +171,13 @@ export function useSupabaseSync(wallet, getSigner) {
         .single()
 
       if (existing) {
+        const newStaked = (existing.total_staked || 0) + Number(amount);
         await supabase.from('user_stats').update({
           total_bets: (existing.total_bets || 0) + 1,
-          total_staked: (existing.total_staked || 0) + Number(amount),
+          total_staked: newStaked,
+          profit: (existing.total_won || 0) - newStaked,
+          wins: existing.wins || 0,
+          losses: existing.losses || 0,
           last_bet_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }).eq('user_address', userAddress.toLowerCase())
@@ -183,6 +187,7 @@ export function useSupabaseSync(wallet, getSigner) {
           total_bets: 1,
           total_staked: Number(amount),
           total_won: 0,
+          profit: -(Number(amount)),
           wins: 0,
           losses: 0,
           last_bet_at: new Date().toISOString(),
@@ -227,15 +232,14 @@ export function useSupabaseSync(wallet, getSigner) {
           .single()
 
         if (stats) {
-          const update = {
+          const newWins = (stats.wins || 0) + (isWinner ? 1 : 0);
+          const newLosses = (stats.losses || 0) + (isWinner ? 0 : 1);
+          await supabase.from('user_stats').update({
+            wins: newWins,
+            losses: newLosses,
+            profit: (stats.total_won || 0) - (stats.total_staked || 0),
             updated_at: new Date().toISOString(),
-          }
-          if (isWinner) {
-            update.wins = (stats.wins || 0) + 1
-          } else {
-            update.losses = (stats.losses || 0) + 1
-          }
-          await supabase.from('user_stats').update(update).eq('user_address', addr)
+          }).eq('user_address', addr).then().catch(e => console.error("profit update failed:", e))
         }
 
         // Create notification

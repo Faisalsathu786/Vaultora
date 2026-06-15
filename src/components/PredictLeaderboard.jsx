@@ -29,7 +29,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
     fetchedRef.current = true;
     supabase.from('user_stats')
       .select('*').gt('total_bets', 0)
-      .order('profit', { ascending: false }).limit(100)
+      .order('total_bets', { ascending: false }).limit(100)
       .then(({ data }) => { if (data) { setLocalLb(data); setLastUpdate(Date.now()); } })
       .catch(() => {});
   }, [supabase]);
@@ -43,7 +43,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
         async () => {
           const { data } = await supabase
             .from('user_stats').select('*').gt('total_bets', 0)
-            .order('profit', { ascending: false }).limit(100);
+            .order('total_bets', { ascending: false }).limit(100);
           if (data) { setLocalLb(data); setLastUpdate(Date.now()); }
         }
       ).subscribe();
