@@ -1052,9 +1052,9 @@ body {
   transition: all .18s;
 }
 .pred-vote-btn:hover       { transform: translateY(-2px); }
-.pred-vote-btn.bull:hover  { border-color: var(--green); color: var(--green); background: rgba(74,222,128,.08); }
-.pred-vote-btn.bear:hover  { border-color: #f87171; color: #f87171; background: rgba(248,113,113,.08); }
-.pred-vote-btn.neutral:hover { border-color: var(--gold); color: var(--gold); background: rgba(251,191,36,.08); }
+.pred-vote-btn:hover  { border-color: var(--accent); color: var(--text); background: rgba(172,170,255,.08); }
+
+
 
 .pred-voted {
   display: flex;
@@ -1488,8 +1488,8 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
 }
-.mkt-opt-chip.yes   { background: rgba(74,222,128,.1);  color: var(--green); border: 1px solid rgba(74,222,128,.2); }
-.mkt-opt-chip.no    { background: rgba(248,113,113,.08); color: #f87171;      border: 1px solid rgba(248,113,113,.15); }
+.mkt-opt-chip { background: rgba(172,170,255,.1); color: var(--text); border: 1px solid rgba(172,170,255,.2); }
+
 .mkt-opt-chip.other { background: var(--surf2); color: var(--sub); border: 1px solid var(--line2); }
 
 /* ── BET OPTIONS GRID ── */
@@ -1499,7 +1499,7 @@ body {
   gap: 8px;
   margin-bottom: 4px;
 }
-.bet-opts-grid .pred-vote-btn {
+.bet-btn-opt, .bet-opts-grid .pred-vote-btn {
   flex: 1 1 calc(50% - 4px);
   min-width: 80px;
 }
@@ -1725,8 +1725,8 @@ body {
   min-width: 56px;
   white-space: nowrap;
 }
-.mkt-out.yes { color: var(--green); text-align: left; }
-.mkt-out.no  { color: #f87171; text-align: right; }
+.mkt-out { color: var(--text); }
+
 
 .mkt-bar-wrap {
   flex: 1;
@@ -1797,11 +1797,7 @@ body {
 .bet-opt-multi:hover {
   border-color: var(--purple) !important;
 }
-.bet-opt-multi.opt-1 { border-left: 3px solid var(--green) !important; }
-.bet-opt-multi.opt-2 { border-left: 3px solid #f87171 !important; }
-.bet-opt-multi.opt-3 { border-left: 3px solid #a78bfa !important; }
-.bet-opt-multi.opt-4 { border-left: 3px solid #fbbf24 !important; }
-.bet-opt-multi.opt-5 { border-left: 3px solid #38bdf8 !important; }
+.bet-opt-multi { border-left: 3px solid var(--accent); }
 
 .mkt-meta {
   display: flex;
@@ -1929,7 +1925,7 @@ body {
   font-size: .88rem;
   font-weight: 700;
 }
-.pos-side.yes { color: var(--green); }
+.pos-side { color: var(--text); }
 .pos-side.no  { color: #f87171; }
 
 .pos-staked {

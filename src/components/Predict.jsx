@@ -307,7 +307,7 @@ export default function Predict({
 
             <div className="mkt-odds">
               {opts.map((opt, oi) => (
-                <span key={oi} className={`mkt-out ${oi === 0 ? 'yes' : oi === 1 ? 'no' : 'neu'}`}>{opt}</span>
+                <span key={oi} className="mkt-out">{opt}</span>
               ))}
             </div>
 
@@ -346,7 +346,7 @@ export default function Predict({
                     )}
                     <div className={`bet-opts-grid${multi && opts.length > 3 ? ' bet-opts-scroll' : ''}`}>
                       {opts.map((opt, oi) => {
-                        const cls = multi ? ('bet-opt-multi opt-' + ((oi % 5) + 1)) : (oi === 0 ? 'bull' : 'bear');
+                        const cls = multi ? 'bet-opt-multi' : 'bet-btn-opt';
                         return (
                           <button key={oi} className={`pred-vote-btn ${cls}`}
                             onClick={() => handleBuy(mId, oi)}>
@@ -394,7 +394,7 @@ export default function Predict({
                         const bal = positions[mId]?.balances?.[oi] || 0;
                         if (bal <= 0) return null;
                         return (
-                          <button key={oi} className={`pred-vote-btn bet-opt-multi opt-${(oi % 5) + 1}`}
+                          <button key={oi} className='pred-vote-btn bet-opt-multi'
                             onClick={() => {
                               const amt = Number(sellAmt) || Number(positions[mId]?.balances?.[oi]) / 1e6;
                               if (amt <= 0) { notify('No tokens to sell', 'error'); return; }
@@ -421,7 +421,7 @@ export default function Predict({
             )}
 
             {!endedAt && activeMktId !== mId && (
-              <button className="pred-vote-btn bull" style={{ width: '100%', marginTop: 8 }}
+              <button className="pred-vote-btn" style={{ width: '100%', marginTop: 8 }}
                 onClick={() => { setActiveMktId(mId); setBetAmt(''); setSellAmt(''); }}>
                 Trade
               </button>
