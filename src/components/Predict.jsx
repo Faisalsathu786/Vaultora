@@ -26,6 +26,7 @@ export default function Predict({
   const [sellPreview, setSellPreview] = useState(null);
   const [portTab, setPortTab] = useState('active'); // active | pending | settled
   const [sellSel, setSellSel] = useState(null); // "mktId_outcome"
+  const [buySel, setBuySel] = useState(null);
 
   const uploadImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
@@ -219,10 +220,10 @@ export default function Predict({
                         const isWinner = m.resolved && oi === m.winningOutcome;
                         const isSelected = sellSel === `${m.id}_${oi}`;
                         return (
-                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background: isSelected ? 'rgba(0,168,139,.08)' : 'rgba(255,255,255,.03)',borderRadius:8,border: isSelected ? '1px solid rgba(0,168,139,.3)' : '1px solid rgba(255,255,255,.06)',cursor:'pointer'}}
+                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background:isSelected?'rgba(0,168,139,.08)':'rgba(255,255,255,.03)',borderRadius:8,border:isSelected?'1px solid rgba(0,168,139,.3)':'1px solid rgba(255,255,255,.06)',cursor:'pointer'}}
                             onClick={() => {
-                              if (!m.resolved) {
-                                setSellSel(isSelected ? null : `${m.id}_${oi}`);
+                              if(!m.resolved) {
+                                setSellSel(isSelected?null:`${m.id}_${oi}`);
                                 setSellAmt(balDisplay);
                                 setSellPreview(null);
                               }
@@ -242,44 +243,27 @@ export default function Predict({
                                 <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
                                   <input type="number" placeholder="Amount" value={sellAmt}
                                     onChange={e => setSellAmt(e.target.value)}
-                                    onClick={e => e.stopPropagation()}
+                                    onClick={e=>e.stopPropagation()}
                                     style={{flex:1,padding:'6px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.06)',color:'#fff',fontSize:'.78rem',outline:'none'}} />
                                   <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 8px',whiteSpace:'nowrap'}}
-                                    onClick={e => { e.stopPropagation(); setSellAmt(balDisplay); }}>MAX</button>
+                                    onClick={e=>{e.stopPropagation();setSellAmt(balDisplay);}}>MAX</button>
                                 </div>
                                 <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
                                   <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px'}}
-                                    onClick={e => { e.stopPropagation(); setSellSel(null); setSellPreview(null); }}>Cancel</button>
+                                    onClick={e=>{e.stopPropagation();setSellSel(null);setSellPreview(null);}}>Cancel</button>
                                   <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 12px'}}
-                                    onClick={async (e) => {
-                                      e.stopPropagation();
-                                      const numAmt = Number(sellAmt);
-                                      if (numAmt <= 0 || numAmt > (Number(p.balances[oi])/1e6)) return notify('Invalid amount','error');
-                                      const ok = await sellTokens(mId, oi, numAmt);
-                                      if (ok) { notify('Sold!','success'); setSellSel(null); setSellAmt(''); fetchMarkets(); }
-                                      else notify('Sell failed','error');
-                                    }}>Sell</button>
+                                    onClick={async (e)=>{e.stopPropagation();const a=Number(sellAmt);if(a<=0||a>(Number(p.balances[oi])/1e6))return notify('Invalid amount','error');const ok=await sellTokens(mId,oi,a);if(ok){notify('Sold!','success');setSellSel(null);setSellAmt('');fetchMarkets();}else notify('Sell failed','error');}}>Sell</button>
                                 </div>
                               </div>
                             )}
                             <div style={{display:'flex',gap:6}}>
                               {!isSelected && !isSettled && !m.resolved && (
                                 <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                  onClick={e => {
-                                    e.stopPropagation();
-                                    setSellSel(`${m.id}_${oi}`);
-                                    setSellAmt(balDisplay);
-                                  }}>Sell</button>
+                                  onClick={e=>{e.stopPropagation();setSellSel(`${m.id}_${oi}`);setSellAmt(balDisplay);}}>Sell</button>
                               )}
                               {isWinner && (
                                 <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    setClaiming(p => ({...p,[mId]:true}));
-                                    try { await claimWinnings(mId); notify('Claimed!','success'); }
-                                    catch(e) { notify('Claim failed','error'); }
-                                    setClaiming(p => ({...p,[mId]:false}));
-                                  }}>Claim</button>
+                                  onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim</button>
                               )}
                             </div>
                           </div>
