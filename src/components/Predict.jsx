@@ -95,7 +95,11 @@ export default function Predict({
           onClick={() => setMarketTab('ended')}>Ended</button>
         <button className={`cm-toggle ${marketTab === 'leaderboard' ? 'active' : ''}`}
           onClick={() => setMarketTab('leaderboard')}>
-          🏆 Leaderboard
+          Leaderboard
+        </button>
+        <button className={`cm-toggle ${marketTab === 'portfolio' ? 'active' : ''}`}
+          onClick={() => setMarketTab('portfolio')}>
+          Portfolio
         </button>
         {isOwner && wallet && (
           <button className="btn-secondary" style={{ fontSize: '.75rem', padding: '4px 12px' }}
@@ -138,12 +142,7 @@ export default function Predict({
         </div>
       )}
 
-      {wallet && positions && Object.keys(positions).length > 0 && (() => {
-        const activePos = []; const pendingPos = []; const settledPos = [];
-        markets.forEach(m => {
-          const pos = positions[m.id];
-          if (!pos || pos.balances.every(b => b <= 0)) return;
-          const entry = { market: m, pos };
+
           if (m.resolved) settledPos.push(entry);
           else if (m.secsLeft <= 0 && !m.cancelled) pendingPos.push(entry);
           else activePos.push(entry);
@@ -307,6 +306,34 @@ export default function Predict({
 
       {marketTab === 'leaderboard' ? (
         <PredictLeaderboard wallet={wallet} />
+      ) : marketTab === 'portfolio' ? (
+        wallet && positions && Object.keys(positions).length > 0 ? (() => {
+          const activePos = []; const pendingPos = []; const settledPos = [];
+          markets.forEach(m => {
+            const pos = positions[m.id];
+            if (!pos || pos.balances.every(b => b <= 0)) return;
+            const entry = { market: m, pos };
+            // ... same existing portfolio logic from below
+          });
+          return (
+            <div className="card">
+              <p className="card-lbl">My Portfolio</p>
+              <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
+                <button className={`cm-toggle ${portTab === 'active' ? 'active' : ''}`}
+                  onClick={() => setPortTab('active')}>Active ({activePos.length})</button>
+                <button className={`cm-toggle ${portTab === 'pending' ? 'active' : ''}`}
+                  onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
+                <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
+                  onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
+                <button className={`cm-toggle ${portTab === 'history' ? 'active' : ''}`}
+                  onClick={() => { setPortTab('history'); if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>History</button>
+              </div>
+              <p className="empty">Connect wallet to view portfolio</p>
+            </div>
+          );
+        })() : (
+          <div className="card"><p className="empty">No positions yet. Place a bet to start!</p></div>
+        )
       ) : mkLoading ? (
         <p className="empty">Loading markets...</p>
       ) : filtered.length === 0 ? (
