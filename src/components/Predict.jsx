@@ -213,7 +213,7 @@ export default function Predict({
                         if (bal <= 0) return null;
                         const balDisplay = (bal / 1e18).toFixed(4);
                         const pv = getPositionValue(m.id, oi, bal);
-                        const pp = pv.value;
+                        const pp = getPotentialPayout(m.id, oi, bal);
                         const isWinner = m.resolved && oi === m.winningOutcome;
                         const isSelected = sellSel === `${m.id}_${oi}`;
                         return (
