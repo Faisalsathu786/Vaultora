@@ -1,7 +1,4 @@
 import { useState } from 'react';
-import { ethers } from 'ethers';
-import { PM_ADDRESS } from '../constants/contracts.js';
-import abi from '../../contracts/VaultoraMarkets.json';
 import PredictLeaderboard from './PredictLeaderboard.jsx';
 
 const RPC = 'https://rpc.testnet.arc.network';
