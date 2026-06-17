@@ -151,22 +151,110 @@ export default function Predict({
             const pos = positions[m.id];
             if (!pos || pos.balances.every(b => b <= 0)) return;
             const entry = { market: m, pos };
-            // ... same existing portfolio logic from below
+            if (m.resolved) settledPos.push(entry);
+            else if (m.secsLeft <= 0 && !m.cancelled) pendingPos.push(entry);
+            else activePos.push(entry);
           });
+          const list = portTab === 'active' ? activePos : portTab === 'pending' ? pendingPos : settledPos;
           return (
             <div className="card">
               <p className="card-lbl">My Portfolio</p>
-              <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
-                <button className={`cm-toggle ${portTab === 'active' ? 'active' : ''}`}
-                  onClick={() => setPortTab('active')}>Active ({activePos.length})</button>
-                <button className={`cm-toggle ${portTab === 'pending' ? 'active' : ''}`}
-                  onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
-                <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
-                  onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
-                <button className={`cm-toggle ${portTab === 'history' ? 'active' : ''}`}
-                  onClick={() => { setPortTab('history'); if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>History</button>
-              </div>
-              <p className="empty">Connect wallet to view portfolio</p>
+              {portTab !== 'history' ? (
+                <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
+                  <button className={`cm-toggle ${portTab === 'active' ? 'active' : ''}`}
+                    onClick={() => setPortTab('active')}>Active ({activePos.length})</button>
+                  <button className={`cm-toggle ${portTab === 'pending' ? 'active' : ''}`}
+                    onClick={() => setPortTab('pending')}>Pending ({pendingPos.length})</button>
+                  <button className={`cm-toggle ${portTab === 'settled' ? 'active' : ''}`}
+                    onClick={() => setPortTab('settled')}>Settled ({settledPos.length})</button>
+                  <button className={`cm-toggle ${portTab === 'history' ? 'active' : ''}`}
+                    onClick={() => { setPortTab('history'); if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); }}>History</button>
+                </div>
+              ) : null}
+              {portTab === 'history' ? (
+                <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
+                  <button className="cm-toggle" onClick={() => setPortTab('active')}>← Back</button>
+                  <button className="cm-toggle active" style={{marginLeft:'auto'}}>History</button>
+                </div>
+              ) : null}
+              {portTab === 'history' ? (() => {
+                const trades = supabaseData?.trades || [];
+                return trades.length === 0 ? (
+                  <p className="empty">No trade history</p>
+                ) : (
+                  <div className="lb-table-wrap" style={{maxHeight:400,overflow:'auto'}}>
+                    <table className="lb-table">
+                      <thead><tr><th>Market</th><th>Action</th><th>Amount</th><th>Time</th></tr></thead>
+                      <tbody>
+                        {trades.slice(0, 30).map((tx, i) => (
+                          <tr key={i}>
+                            <td style={{fontSize:'.65rem',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{tx.market_id}</td>
+                            <td style={{fontSize:'.65rem',color:tx.action==='buy'?'#34d399':'#f87171'}}>{tx.action}</td>
+                            <td style={{fontSize:'.65rem'}}>{Number(tx.amount||0).toFixed(2)}</td>
+                            <td style={{fontSize:'.65rem',color:'#888'}}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })() : (
+                list.length === 0 ? (
+                  <p className="empty">No {portTab} positions</p>
+                ) : list.map(e => {
+                  const m = e.market; const p = e.pos;
+                  const opts = m.options || [];
+                  const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
+                  const isSettled = portTab === 'settled';
+                  const mId = m.id;
+                  return (
+                    <div key={mId} style={{marginBottom:6}}>
+                      <div style={{fontSize:'.78rem',fontWeight:600,marginBottom:4}}>#{m.id} {m.question}</div>
+                      {opts.map((opt, oi) => {
+                        const bal = Number(p.balances[oi] || 0);
+                        if (bal <= 0) return null;
+                        const balDisplay = (bal / 1e6).toFixed(4);
+                        const pv = getPositionValue(m.id, oi, bal);
+                        const pp = getPotentialPayout(m.id, oi, bal);
+                        const isWinner = m.resolved && oi === m.winningOutcome;
+                        return (
+                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background:'rgba(255,255,255,.03)',borderRadius:8,border:'1px solid rgba(255,255,255,.06)'}}>
+                            <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'#34d399':'#ccc'}}>{opt} {isWinner?'✓':''}</span>
+                              <span style={{fontSize:'.7rem',color:'#888'}}>{balDisplay} tkn</span>
+                            </div>
+                            {!isSettled && (
+                              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                                <span style={{fontSize:'.7rem',color:'#aaa'}}>Value: ${pv.value.toFixed(2)}</span>
+                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#ffe098'}}>Payout: ${pp.toFixed(2)}</span>}
+                              </div>
+                            )}
+                            <div style={{display:'flex',gap:6}}>
+                              {!isSettled && !m.resolved && (
+                                <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
+                                  onClick={() => {
+                                    setActiveMktId(mId); setActionTab('sell');
+                                    setSellAmt(String((Number(p.balances[oi]) / 1e6).toFixed(4)));
+                                    setMarketTab('active');
+                                  }}>Sell</button>
+                              )}
+                              {isWinner && (
+                                <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
+                                  onClick={async () => {
+                                    setClaiming(p => ({...p,[mId]:true}));
+                                    try { await claimWinnings(mId); notify('Claimed!','success'); }
+                                    catch(e) { notify('Claim failed','error'); }
+                                    setClaiming(p => ({...p,[mId]:false}));
+                                  }}>Claim</button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })
+              )}
             </div>
           );
         })() : (
