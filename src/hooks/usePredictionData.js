@@ -90,30 +90,39 @@ export function usePredictionData(wallet, getSigner) {
     try {
       const c = v2();
       const usdcAmt = ethers.parseUnits(amount, 6);
-      const infos = await c.getOutcomeInfos(marketId);
+      const [infos, totalPoolRaw] = await Promise.all([
+        c.getOutcomeInfos(marketId),
+        c.markets(marketId).then(m => BigInt(m.totalPool || 0n))
+      ]);
       const info = infos[outcome];
       if (!info) return;
-      // info is Result [tokenAddr, pool, supply] — access by index for safety
-      const pool = BigInt(info[1] || 0n);
-      const supply = BigInt(info[2] || 0n);
-      const VIRTUAL_USDC = 1000n * 1000000n;
-      const VIRTUAL_TOKENS = 1000000n * 10n ** 18n;
-      const totalPool = pool + VIRTUAL_USDC;
-      const totalToken = supply + VIRTUAL_TOKENS;
+
+      const poolI = BigInt(info[1] || 0n);        // this outcome's pool
+      const supplyI = BigInt(info[2] || 0n);       // this outcome's supply
+      const NUM_OUTCOMES = BigInt(infos.length);
+      const VIRTUAL_USDC = 1000n * 1000000n;       // 1000 USDC
+      const VIRTUAL_TOKENS = 1000000n * 10n ** 18n; // 1M tokens
+
+      // AMM: how many tokens user gets for usdcAmt
+      const totalPool = poolI + VIRTUAL_USDC;
+      const totalToken = supplyI + VIRTUAL_TOKENS;
       const k = totalPool * totalToken;
-      const newPool = totalPool + usdcAmt;
+      const fee = usdcAmt * 80n / 10000n;          // 0.8%
+      const netIn = usdcAmt - fee;
+      const newPool = totalPool + netIn;
       const newToken = k / newPool;
       const tokensOut = totalToken - newToken;
-      // Potential Return = tokensOut / (supply + tokensOut + virtual) * (pool + net + virtual)
-      const fee = usdcAmt * 80n / 10000n; // 0.8%
-      const netIn = usdcAmt - fee;
-      const potReturnPool = pool + netIn + VIRTUAL_USDC;
-      const potReturnSupply = supply + tokensOut + VIRTUAL_TOKENS;
-      const potReturn = potReturnSupply > 0n ? (tokensOut * potReturnPool) / potReturnSupply : 0n;
-      // formatUnits with 6 decimals for USDC
+
+      // Potential Return = (tokensOut / finalWinnerSupply) * totalMarketPool
+      // finalWinnerSupply = supplyI + tokensOut + VIRTUAL_TOKENS
+      // totalMarketPool = sum(all pools) + netIn + NUM_OUTCOMES * VIRTUAL_USDC
+      const finalWinnerSupply = supplyI + tokensOut + VIRTUAL_TOKENS;
+      const finalTotalPool = totalPoolRaw + netIn + (NUM_OUTCOMES * VIRTUAL_USDC);
+      const potReturn = finalWinnerSupply > 0n ? (tokensOut * finalTotalPool) / finalWinnerSupply : 0n;
+
       const retUsdc = Number(potReturn) / 1e6;
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(retUsdc.toFixed(4)) }));
-    } catch (e) { console.error('Payout est error:', e?.message?.slice(0,60)); }
+    } catch (e) { console.error('Payout est error:', e?.message?.slice(0,80)); }
   }, [v2]);
 
   const buyTokens = async (marketId, outcome) => {

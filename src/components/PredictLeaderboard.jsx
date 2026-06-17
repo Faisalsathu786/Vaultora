@@ -15,14 +15,17 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
       const provider = new ethers.JsonRpcProvider(RPC);
       const pm = new ethers.Contract(V2_ADDRESS, V2_ABI, provider);
 
-      // Query ALL TokensBought + TokensSold events
+      // Query recent events (last 50000 blocks, don't scan from 0)
+      const latestBlock = await provider.getBlockNumber();
+      const fromBlock = Math.max(0, latestBlock - 50000);
+      
       const userMap = {};
       
       const buyFilter = pm.filters.TokensBought();
       const sellFilter = pm.filters.TokensSold();
       const [buyEvents, sellEvents] = await Promise.all([
-        pm.queryFilter(buyFilter, 0, 'latest'),
-        pm.queryFilter(sellFilter, 0, 'latest'),
+        pm.queryFilter(buyFilter, fromBlock, 'latest'),
+        pm.queryFilter(sellFilter, fromBlock, 'latest'),
       ]);
 
       for (const e of [...buyEvents, ...sellEvents]) {
@@ -37,7 +40,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
 
       // Query Claimed events for extra stats
       const claimFilter = pm.filters.Claimed();
-      const claimEvents = await pm.queryFilter(claimFilter, 0, 'latest');
+      const claimEvents = await pm.queryFilter(claimFilter, fromBlock, 'latest');
       for (const e of claimEvents) {
         const addr = e.args.user.toLowerCase();
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
