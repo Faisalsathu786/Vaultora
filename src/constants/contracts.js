@@ -2,6 +2,7 @@ export const VAULT_ADDRESS = "0x43EB3BE71cadf57Ac1323876b26660AF07E2fef5";
 export const USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 export const EURC_ADDRESS = "0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a";
 export const PM_ADDRESS   = "0x8Df2331866eC00C163BD6aBFaA562040e3b9f3c8";
+export const V2_ADDRESS   = "0x6CEAabd5C4AFf193b9987f74683A1A1827647Af0";
 export const PM_ADDRESS_V1 = "0xf1B0D69b9eA5AB9946f4a38b7B123C429D07D880";
 export const OWNER_ADDRESS = "0xD2b0082c89516Fd2349dF1179200E1B57c803119";
 
@@ -91,4 +92,23 @@ export const NAV = [
   { id: "history",     label: "History" },
   { id: "leaderboard", label: "Leaderboard" },
   { id: "admin",       label: "Admin" },
+];
+
+export const V2_ABI = [
+  "function marketCount() view returns (uint256)",
+  "function getAllMarkets() view returns (tuple(uint256 id, string question, uint256 endTime, address creator, uint8 status, uint8 winningIdx, uint256 totalPool)[])",
+  "function markets(uint256) view returns (uint256 id, string question, uint256 endTime, address creator, uint8 status, uint8 winningIdx, uint256 totalPool)",
+  "function getOutcomes(uint256 mktId) view returns (string[])",
+  "function getOutcomeInfos(uint256 mktId) view returns (tuple(address tokenAddr, uint256 pool, uint256 supply)[])",
+  "function getTokenPrice(uint256 mktId, uint8 outcome) view returns (uint256)",
+  "function getMarketCap(uint256 mktId, uint8 outcome) view returns (uint256)",
+  "function owner() view returns (address)",
+  "function resolvedClaimed(uint256, address) view returns (bool)",
+  "function buyTokens(uint256 mktId, uint8 outcome, uint256 usdcAmt) external",
+  "function sellTokens(uint256 mktId, uint8 outcome, uint256 tokenAmt) external",
+  "function claimWinnings(uint256 mktId) external",
+  "function refund(uint256 mktId) external",
+  "function createMarket(string question, uint256 endTime, string[] outcomes) external returns (uint256)",
+  "function resolveMarket(uint256 mktId, uint8 winner) external",
+  "function cancelMarket(uint256 mktId) external",
 ];

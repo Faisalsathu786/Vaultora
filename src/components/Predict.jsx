@@ -47,11 +47,11 @@ export default function Predict({
   const getPositionValue = (mId, outcome, balance) => {
     const m = markets.find(x => x.id === mId);
     if (!m || !m.pool || !m.supply) return { value: 0, pct: 0 };
-    const pool = Number(m.pool?.[outcome] || 0);
-    const supply = Number(m.supply?.[outcome] || 1);
-    const currentValue = pool > 0 && supply > 0 ? Number(((BigInt(pool) * BigInt(balance)) / BigInt(supply)).toString()) / 1e6 : 0;
-    const pct = pool > 0 && balance > 0 ? (pool / supply) * 100 : 0;
-    return { value: currentValue, pct };
+    const pool = BigInt(m.pool?.[outcome] || 0);
+    const supply = BigInt(m.supply?.[outcome] || 1n);
+    const tok = supply > 0n ? (pool * BigInt(balance)) / supply : 0n;
+    const currentValue = Number(tok) / 1e6;
+    return { value: currentValue, pct: 0 };
   };
 
   const getPotentialPayout = (mId, outcome, balance) => {
@@ -214,9 +214,9 @@ export default function Predict({
                       {opts.map((opt, oi) => {
                         const bal = Number(p.balances[oi] || 0);
                         if (bal <= 0) return null;
-                        const balDisplay = (bal / 1e6).toFixed(4);
+                        const balDisplay = (bal / 1e18).toFixed(4);
                         const pv = getPositionValue(m.id, oi, bal);
-                        const pp = getPotentialPayout(m.id, oi, bal);
+                        const pp = pv.value;
                         const isWinner = m.resolved && oi === m.winningOutcome;
                         const isSelected = sellSel === `${m.id}_${oi}`;
                         return (
@@ -395,14 +395,15 @@ export default function Predict({
                             onClick={()=>{
                               if(isSelected){setSellSel(null);setSellPreview(null);return;}
                               setSellSel(`${mId}_${oi}`);
-                              const amt=Number(sellAmt)||Number(bal)/1e6;
+                              const amt=Number(sellAmt)||Number(bal)/1e18;
                               if(amt<=0){notify('No tokens to sell','error');return;}
                               const m=markets.find(x=>x.id===mId);
                               const pool=Number(m?.pool?.[oi]||0);
                               const supply=Number(m?.supply?.[oi]||1);
-                              const rawAmt=amt*1e6;
-                              const share=Math.min(rawAmt,bal);
-                              const gross=pool>0&&supply>0?(pool*share)/supply/1e6:0;
+                              const rawAmt=BigInt(Math.floor(amt*1e18));
+                              const balBig=BigInt(bal);
+                              const share=rawAmt<balBig?rawAmt:balBig;
+                              const gross=supply>0?Number((BigInt(pool)*share)/BigInt(supply))/1e6:0;
                               const fee=gross*0.008;
                               const tax=Math.min(gross*0.3,gross*0.3);
                               setSellPreview({opt,outcome:oi,gross,fee,tax,net:Math.max(0,gross-fee-tax)});
