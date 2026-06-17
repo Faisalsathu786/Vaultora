@@ -8,6 +8,8 @@ const RPC = 'https://rpc.testnet.arc.network';
 
 export default function PredictLeaderboard({ wallet, supabaseLbData, supabase }) {
   const [traders, setTraders] = useState([]);
+  const [top100, setTop100] = useState([]);
+  const [userRank, setUserRank] = useState(null);
 
   const fetchAllUsers = async () => {
     try {
@@ -69,6 +71,14 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
         .sort((a, b) => b.totalStaked - a.totalStaked);
 
       setTraders(allTraders);
+      setTop100(allTraders.slice(0, 100));
+      // Find current user rank
+      const userIdx = allTraders.findIndex(t => t.address === wallet?.toLowerCase());
+      if (userIdx >= 0) {
+        setUserRank({ rank: userIdx + 1, ...allTraders[userIdx] });
+      } else {
+        setUserRank(null);
+      }
     } catch (e) {
       console.error('PredictLeaderboard error:', e);
     }
@@ -116,12 +126,12 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </div>
             ))}
           </div>
-          {/* Table — all users */}
+          {/* Table — top 100 */}
           <div className="lb-table-wrap">
             <table className="lb-table">
               <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>Bets</th><th>Markets</th></tr></thead>
               <tbody>
-                {traders.map((u, idx) => (
+                {top100.map((u, idx) => (
                   <tr key={u.address} className={u.address === wallet?.toLowerCase() ? 'is-you' : ''}>
                     <td className="lb-rank">{idx + 1}</td>
                     <td className="lb-trader">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</td>
@@ -133,6 +143,30 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </tbody>
             </table>
           </div>
+
+          {/* Your rank (if outside top 100) */}
+          {userRank && userRank.rank > 100 && (
+            <div className="your-rank-card">
+              <div className="your-rank-label">Your Rank</div>
+              <div className="your-rank-row">
+                <span className="your-rank-num">#{userRank.rank}</span>
+                <span className="your-rank-val">Vol: {formatVol(userRank.totalStaked)}</span>
+                <span className="your-rank-val">{userRank.totalBets} bets · {userRank.marketsCount}m</span>
+              </div>
+              <div className="your-rank-hint">You need ~${formatVol(top100[99]?.totalStaked || 0)} volume to enter top 100</div>
+            </div>
+          )}
+          {/* If in top 100, show small 'You' label */}
+          {userRank && userRank.rank <= 100 && (
+            <div className="your-rank-card" style={{marginTop:4}}>
+              <div className="your-rank-row" style={{justifyContent:'center',gap:8}}>
+                <span>👤 You</span>
+                <span>#{userRank.rank}</span>
+                <span>Vol: {formatVol(userRank.totalStaked)}</span>
+                <span>{userRank.totalBets}b · {userRank.marketsCount}m</span>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
