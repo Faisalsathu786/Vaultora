@@ -341,6 +341,7 @@ export default function App() {
           {page === "predict" && (
             <ErrorBoundary>
             <Predict wallet={wallet} getSigner={getSigner}
+              isOwner={isOwner}
               notify={showToast}
               markets={markets} mkLoading={mkLoading}
               betAmt={betAmt} setBetAmt={setBetAmt}

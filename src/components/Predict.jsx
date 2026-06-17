@@ -14,7 +14,7 @@ export default function Predict({
   wallet, getSigner,
   markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
   activeMktId, setActiveMktId, actionTab, setActionTab,
-  showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
+  showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating, isOwner,
   payoutEst, positions, now, marketTab, setMarketTab,
   fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
   notify, supabaseLbData, supabase, syncBet, syncVaultDeposit, syncMarketResult, supabaseData,
@@ -93,7 +93,7 @@ export default function Predict({
           onClick={() => setMarketTab('active')}>Active</button>
         <button className={`cm-toggle ${marketTab === 'ended' ? 'active' : ''}`}
           onClick={() => setMarketTab('ended')}>Ended</button>
-        {wallet && (
+        {isOwner && wallet && (
           <button className="btn-secondary" style={{ fontSize: '.75rem', padding: '4px 12px' }}
             onClick={() => setShowCreateForm(p => !p)}>
             {showCreateForm ? 'Cancel' : '+ Create'}
@@ -103,7 +103,7 @@ export default function Predict({
           onClick={() => fetchMarkets()}>Refresh</button>
       </div>
 
-      {showCreateForm && (
+      {isOwner && showCreateForm && (
         <div className="card">
           <p className="card-lbl">Create Market</p>
           <input className="num-input" placeholder="Question"
