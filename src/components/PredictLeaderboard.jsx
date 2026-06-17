@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { ethers } from 'ethers';
-import { PM_ADDRESS } from '../constants/contracts.js';
-import implAbi from '../../contracts/VaultoraMarkets.json';
+import { V2_ADDRESS, V2_ABI } from '../constants/contracts.js';
 import { trimAddr } from '../utils/format.js';
 
 const RPC = 'https://rpc.testnet.arc.network';
@@ -14,34 +13,35 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
   const fetchAllUsers = async () => {
     try {
       const provider = new ethers.JsonRpcProvider(RPC);
-      const pm = new ethers.Contract(PM_ADDRESS, implAbi, provider);
+      const pm = new ethers.Contract(V2_ADDRESS, V2_ABI, provider);
 
-      // Step 1: Query ALL BetPlaced events (all users)
-      const filter = pm.filters.BetPlaced();
-      const events = await pm.queryFilter(filter, 0, 'latest');
+      // Query ALL TokensBought + TokensSold events
+      const userMap = {};
       
-      const userMap = {}; // { addr: { totalBets, staked, markets: Set<id> } }
-      for (const e of events) {
+      const buyFilter = pm.filters.TokensBought();
+      const sellFilter = pm.filters.TokensSold();
+      const [buyEvents, sellEvents] = await Promise.all([
+        pm.queryFilter(buyFilter, 0, 'latest'),
+        pm.queryFilter(sellFilter, 0, 'latest'),
+      ]);
+
+      for (const e of [...buyEvents, ...sellEvents]) {
         const addr = e.args.user.toLowerCase();
-        const amt = Number(ethers.formatUnits(e.args.amount, 6));
-        const mktId = Number(e.args.marketId);
+        const usdcAmt = Number(ethers.formatUnits(e.args.usdcIn || e.args.usdcOut || 0, 6));
+        const mktId = Number(e.args.mkt);
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
         userMap[addr].totalBets += 1;
-        userMap[addr].staked += amt;
+        userMap[addr].staked += usdcAmt;
         userMap[addr].markets.add(mktId);
       }
 
-      // Step 2: Also check WinningsClaimed events
-      const winFilter = pm.filters.WinningsClaimed();
-      const winEvents = await pm.queryFilter(winFilter, 0, 'latest');
-      
-      for (const e of winEvents) {
+      // Query Claimed events for extra stats
+      const claimFilter = pm.filters.Claimed();
+      const claimEvents = await pm.queryFilter(claimFilter, 0, 'latest');
+      for (const e of claimEvents) {
         const addr = e.args.user.toLowerCase();
-        const payout = Number(ethers.formatUnits(e.args.amount, 6));
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
       }
-
-      // Step 3: Merge with Supabase data if available (richer stats)
       if (supabaseLbData && supabaseLbData.length > 0) {
         for (const sb of supabaseLbData) {
           const addr = sb.user_address?.toLowerCase();
