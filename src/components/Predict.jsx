@@ -217,30 +217,64 @@ export default function Predict({
                         const pv = getPositionValue(m.id, oi, bal);
                         const pp = getPotentialPayout(m.id, oi, bal);
                         const isWinner = m.resolved && oi === m.winningOutcome;
+                        const isSelected = sellSel === `${m.id}_${oi}`;
                         return (
-                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background:'rgba(255,255,255,.03)',borderRadius:8,border:'1px solid rgba(255,255,255,.06)'}}>
+                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background: isSelected ? 'rgba(0,168,139,.08)' : 'rgba(255,255,255,.03)',borderRadius:8,border: isSelected ? '1px solid rgba(0,168,139,.3)' : '1px solid rgba(255,255,255,.06)',cursor:'pointer'}}
+                            onClick={() => {
+                              if (!m.resolved) {
+                                setSellSel(isSelected ? null : `${m.id}_${oi}`);
+                                setSellAmt(balDisplay);
+                                setSellPreview(null);
+                              }
+                            }}>
                             <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'#34d399':'#ccc'}}>{opt} {isWinner?'✓':''}</span>
+                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'#34d399':isSelected?'#00c9a7':'#ccc'}}>{opt} {isWinner?'✓':''}</span>
                               <span style={{fontSize:'.7rem',color:'#888'}}>{balDisplay} tkn</span>
                             </div>
                             {!isSettled && (
                               <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                                 <span style={{fontSize:'.7rem',color:'#aaa'}}>Value: ${pv.value.toFixed(2)}</span>
-                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#ffe098'}}>Payout: ${pp.toFixed(2)}</span>}
+                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#34d399'}}>Payout: ${pp.toFixed(2)}</span>}
+                              </div>
+                            )}
+                            {isSelected && !isSettled && !m.resolved && (
+                              <div style={{marginTop:8}}>
+                                <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+                                  <input type="number" placeholder="Amount" value={sellAmt}
+                                    onChange={e => setSellAmt(e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    style={{flex:1,padding:'6px 10px',borderRadius:8,border:'1px solid rgba(255,255,255,.12)',background:'rgba(255,255,255,.06)',color:'#fff',fontSize:'.78rem',outline:'none'}} />
+                                  <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 8px',whiteSpace:'nowrap'}}
+                                    onClick={e => { e.stopPropagation(); setSellAmt(balDisplay); }}>MAX</button>
+                                </div>
+                                <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                                  <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px'}}
+                                    onClick={e => { e.stopPropagation(); setSellSel(null); setSellPreview(null); }}>Cancel</button>
+                                  <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 12px'}}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const numAmt = Number(sellAmt);
+                                      if (numAmt <= 0 || numAmt > (Number(p.balances[oi])/1e6)) return notify('Invalid amount','error');
+                                      const ok = await sellTokens(mId, oi, numAmt);
+                                      if (ok) { notify('Sold!','success'); setSellSel(null); setSellAmt(''); fetchMarkets(); }
+                                      else notify('Sell failed','error');
+                                    }}>Sell</button>
+                                </div>
                               </div>
                             )}
                             <div style={{display:'flex',gap:6}}>
-                              {!isSettled && !m.resolved && (
+                              {!isSelected && !isSettled && !m.resolved && (
                                 <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                  onClick={() => {
-                                    setActiveMktId(mId); setActionTab('sell');
-                                    setSellAmt(String((Number(p.balances[oi]) / 1e6).toFixed(4)));
-                                    setMarketTab('active');
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setSellSel(`${m.id}_${oi}`);
+                                    setSellAmt(balDisplay);
                                   }}>Sell</button>
                               )}
                               {isWinner && (
                                 <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                  onClick={async () => {
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
                                     setClaiming(p => ({...p,[mId]:true}));
                                     try { await claimWinnings(mId); notify('Claimed!','success'); }
                                     catch(e) { notify('Claim failed','error'); }
