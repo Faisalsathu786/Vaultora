@@ -13,7 +13,6 @@ import Portfolio from './components/Portfolio.jsx';
 import Predict from './components/Predict.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import History from './components/History.jsx';
-import PredictionPortfolio from './components/PredictionPortfolio.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import Leaderboard from './components/Leaderboard.jsx';
 import HowItWorks from './components/HowItWorks.jsx';
