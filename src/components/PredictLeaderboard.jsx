@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { ethers } from 'ethers';
 import { PM_ADDRESS } from '../constants/contracts.js';
 import implAbi from '../../contracts/VaultoraMarkets.json';
@@ -8,109 +8,90 @@ const RPC = 'https://rpc.testnet.arc.network';
 
 export default function PredictLeaderboard({ wallet, supabaseLbData, supabase }) {
   const [traders, setTraders] = useState([]);
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
-  const computeLeaderboard = async () => {
+  const fetchAllUsers = async () => {
     try {
       const provider = new ethers.JsonRpcProvider(RPC);
       const pm = new ethers.Contract(PM_ADDRESS, implAbi, provider);
-      const mktCount = Number(await pm.marketCount());
-      if (mktCount === 0) return;
 
-      // Collect all user trades from localStorage
-      const userMap = {};
-      const scanStorage = () => {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k === 'vt_trades_' || !k.startsWith('vt_trades_')) continue;
-          try {
-            const trades = JSON.parse(localStorage.getItem(k) || '[]');
-            const addr = k.replace('vt_trades_', '');
-            for (const t of trades) {
-              if (!userMap[addr]) userMap[addr] = { bets: 0, staked: 0, won: 0, wins: 0, losses: 0 };
-              userMap[addr].bets += 1;
-              userMap[addr].staked += Number(t.amount || 0);
-              if (t.action === 'claim' || t.action === 'win') {
-                userMap[addr].won += Number(t.amount || 0);
-                userMap[addr].wins += 1;
-              } else if (t.action === 'lose') {
-                userMap[addr].losses += 1;
-              }
-            }
-          } catch {}
-        }
-      };
-      scanStorage();
+      // Step 1: Query ALL BetPlaced events (all users)
+      const filter = pm.filters.BetPlaced();
+      const events = await pm.queryFilter(filter, 0, 'latest');
+      
+      const userMap = {}; // { addr: { totalBets, staked, markets: Set<id> } }
+      for (const e of events) {
+        const addr = e.args.user.toLowerCase();
+        const amt = Number(ethers.formatUnits(e.args.amount, 6));
+        const mktId = Number(e.args.marketId);
+        if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
+        userMap[addr].totalBets += 1;
+        userMap[addr].staked += amt;
+        userMap[addr].markets.add(mktId);
+      }
 
-      // For the current user: add on-chain positions
-      if (wallet) {
-        const addr = wallet.toLowerCase();
-        if (!userMap[addr]) userMap[addr] = { bets: 0, staked: 0, won: 0, wins: 0, losses: 0 };
-        // Count on-chain positions as bets
-        for (let mid = 0; mid < mktCount; mid++) {
-          try {
-            const pos = await pm.getPosition(mid, wallet);
-            const m = await pm.getMarket(mid);
-            const hasBal = pos.balances.some(b => Number(b) > 0);
-            if (hasBal) {
-              userMap[addr].bets += 1;
-              // total staked from supply/pools
-              let totalStaked = 0;
-              for (let oi = 0; oi < m.options.length; oi++) {
-                const bal = Number(pos.balances[oi]);
-                if (bal > 0) {
-                  const s = Number(await pm.supply(mid, oi));
-                  const p = Number(await pm.pools(mid, oi));
-                  totalStaked += s > 0 ? (p * bal) / s : 0;
-                }
-              }
-              userMap[addr].staked += totalStaked / 1e6;
-              // Check if resolved + won
-              if (Number(m.status) === 1) { // resolved
-                if (Number(pos.balances[Number(m.winningOutcome)]) > 0) {
-                  userMap[addr].wins += 1;
-                } else {
-                  userMap[addr].losses += 1;
-                }
-              }
-            }
-          } catch {}
+      // Step 2: Also check WinningsClaimed events
+      const winFilter = pm.filters.WinningsClaimed();
+      const winEvents = await pm.queryFilter(winFilter, 0, 'latest');
+      
+      for (const e of winEvents) {
+        const addr = e.args.user.toLowerCase();
+        const payout = Number(ethers.formatUnits(e.args.amount, 6));
+        if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
+      }
+
+      // Step 3: Merge with Supabase data if available (richer stats)
+      if (supabaseLbData && supabaseLbData.length > 0) {
+        for (const sb of supabaseLbData) {
+          const addr = sb.user_address?.toLowerCase();
+          if (addr && userMap[addr]) {
+            // Use supabase for more accurate stats
+            userMap[addr].staked = Math.max(userMap[addr].staked, Number(sb.total_staked || 0) / 1e6);
+            userMap[addr].totalBets = Math.max(userMap[addr].totalBets, Number(sb.total_bets || 0));
+          } else if (addr && Number(sb.total_bets || 0) > 0) {
+            userMap[addr] = { 
+              totalBets: Number(sb.total_bets || 0), 
+              staked: Number(sb.total_staked || 0) / 1e6, 
+              markets: new Set() 
+            };
+          }
         }
       }
 
-      const entries = Object.entries(userMap).map(([addr, d]) => ({
-        address: addr,
-        totalBets: d.bets,
-        totalStaked: d.staked,
-        wins: d.wins,
-        losses: d.losses,
-        winRate: d.wins + d.losses > 0 ? Math.round(d.wins / (d.wins + d.losses) * 100) : 0,
-        profit: d.won - d.staked,
-      })).filter(e => e.totalBets > 0);
+      // Convert to array and sort
+      const allTraders = Object.entries(userMap)
+        .filter(([, d]) => d.totalBets > 0)
+        .map(([addr, d]) => ({
+          address: addr,
+          totalBets: d.totalBets,
+          totalStaked: d.staked,
+          marketsCount: d.markets.size,
+        }))
+        .sort((a, b) => b.totalStaked - a.totalStaked);
 
-      entries.sort((a, b) => b.profit - a.profit);
-      setTraders(entries);
-      setLastUpdate(Date.now());
-    } catch (e) { console.error('LB error:', e); }
+      setTraders(allTraders);
+    } catch (e) {
+      console.error('PredictLeaderboard error:', e);
+    }
   };
 
-  useEffect(() => { computeLeaderboard(); }, [wallet]);
-
-  // Auto-refresh every 5s
+  // Initial load + periodic refresh
   useEffect(() => {
-    const t = setInterval(() => computeLeaderboard(), 5000);
-    return () => clearInterval(t);
+    fetchAllUsers();
+    const interval = setInterval(fetchAllUsers, 10000); // refresh every 10s
+    return () => clearInterval(interval);
   }, [wallet]);
 
-  const formatProfit = (v) => {
-    if (v === 0) return '$0.00';
-    return `${v > 0 ? '+' : ''}$${Math.abs(v).toFixed(2)}`;
-  };
+  // Re-fetch when supabase data changes
+  useEffect(() => {
+    if (supabaseLbData?.length > 0) fetchAllUsers();
+  }, [supabaseLbData]);
+
   const formatVol = (v) => {
     if (v < 0.01) return '$0';
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}K`;
     return `$${v.toFixed(2)}`;
   };
+
   return (
     <div className="card" style={{ marginTop: 12 }}>
       <div className="lb-top">
@@ -124,34 +105,34 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
         <p className="empty">No trades yet. Place a bet to appear!</p>
       ) : (
         <>
+          {/* Podium — top 3 */}
           <div className="lb-podium">
             {traders.slice(0, 3).map((u, idx) => (
               <div key={u.address} className={`lb-podium-card ${['gold','silver','bronze'][idx]}`}>
                 <div className="lb-podium-rank">{['🥇','🥈','🥉'][idx]}</div>
                 <div className="lb-podium-addr">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</div>
-                <div className="lb-podium-pnl" style={{ color: u.profit >= 0 ? '#34d399' : '#f87171' }}>{formatProfit(u.profit)}</div>
                 <div className="lb-podium-vol">Vol: {formatVol(u.totalStaked)}</div>
+                <div className="lb-podium-vol" style={{fontSize:'.65rem',color:'#888'}}>{u.totalBets} bets · {u.marketsCount}m</div>
               </div>
             ))}
           </div>
+          {/* Table — all users */}
           <div className="lb-table-wrap">
             <table className="lb-table">
-              <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>PnL</th><th>Win Rate</th><th>Bets</th></tr></thead>
+              <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>Bets</th><th>Markets</th></tr></thead>
               <tbody>
                 {traders.map((u, idx) => (
                   <tr key={u.address} className={u.address === wallet?.toLowerCase() ? 'is-you' : ''}>
                     <td className="lb-rank">{idx + 1}</td>
                     <td className="lb-trader">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</td>
                     <td className="lb-num">{formatVol(u.totalStaked)}</td>
-                    <td className="lb-pnl" style={{ color: u.profit > 0 ? '#34d399' : u.profit < 0 ? '#f87171' : '#888' }}>{formatProfit(u.profit)}</td>
-                    <td className="lb-num">{u.winRate}%</td>
                     <td className="lb-num">{u.totalBets}</td>
+                    <td className="lb-num">{u.marketsCount}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          
         </>
       )}
     </div>
