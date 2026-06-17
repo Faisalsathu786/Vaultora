@@ -84,7 +84,7 @@ export default function Predict({
   };
 
   const isOpen = (m) => !m.resolved && !m.cancelled && m.secsLeft > 0;
-  const filtered = markets.filter(m => marketTab === 'active' ? isOpen(m) : !isOpen(m));
+  const filtered = markets.filter(m => marketTab === 'ended' ? !isOpen(m) : isOpen(m));
 
   return (
     <div className="pg">
@@ -93,6 +93,10 @@ export default function Predict({
           onClick={() => setMarketTab('active')}>Active</button>
         <button className={`cm-toggle ${marketTab === 'ended' ? 'active' : ''}`}
           onClick={() => setMarketTab('ended')}>Ended</button>
+        <button className={`cm-toggle ${marketTab === 'leaderboard' ? 'active' : ''}`}
+          onClick={() => setMarketTab('leaderboard')}>
+          🏆 Leaderboard
+        </button>
         {isOwner && wallet && (
           <button className="btn-secondary" style={{ fontSize: '.75rem', padding: '4px 12px' }}
             onClick={() => setShowCreateForm(p => !p)}>
@@ -301,7 +305,9 @@ export default function Predict({
         </div>
       )}
 
-      {mkLoading ? (
+      {marketTab === 'leaderboard' ? (
+        <PredictLeaderboard wallet={wallet} />
+      ) : mkLoading ? (
         <p className="empty">Loading markets...</p>
       ) : filtered.length === 0 ? (
         <p className="empty">{marketTab === 'active' ? 'No active markets' : 'No ended markets'}</p>
@@ -483,7 +489,6 @@ export default function Predict({
         );
       })}
 
-      <PredictLeaderboard wallet={wallet} />
     </div>
   );
 }
