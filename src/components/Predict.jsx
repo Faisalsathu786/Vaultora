@@ -379,8 +379,8 @@ export default function Predict({
                       <input className="num-input" type="number" placeholder="0.00"
                         value={sellAmt} onChange={e=>{setSellAmt(e.target.value);setSellPreview(null);setSellSel(null);}} />
                       <button className="max-btn" onClick={()=>{
-                        let mBal=0;opts.forEach((_,oi)=>{const b=positions[mId]?.balances?.[oi]||0;if(b>mBal)mBal=b;});
-                        if(mBal>0)setSellAmt(String((mBal/1e6).toFixed(4)));
+                        if(sellSel){const [_,oi]=sellSel.split('_').map(Number);const b=positions[mId]?.balances?.[oi]||0;if(b>0)setSellAmt(String((b/1e6).toFixed(4)));}
+                        else{let mBal=0;opts.forEach((_,oi)=>{const b=positions[mId]?.balances?.[oi]||0;if(b>mBal)mBal=b;});if(mBal>0)setSellAmt(String((mBal/1e6).toFixed(4)));}
                       }}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:4}}>Click outcome to preview sell</div>
