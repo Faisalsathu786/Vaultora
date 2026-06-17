@@ -38,7 +38,7 @@ export function usePredictionData(wallet, getSigner) {
       const c = v2();
       const count = Number(await c.marketCount());
       const results = [];
-      for (let i = 0; i < count; i++) {
+      for (let i = 1; i <= count; i++) {
         const m = await c.markets(i);
         const opts = await c.getOutcomes(i);
         const infos = await c.getOutcomeInfos(i);
@@ -63,7 +63,7 @@ export function usePredictionData(wallet, getSigner) {
       // Fetch positions (token balances) for connected wallet
       if (wallet && count > 0) {
         const pos = {};
-        for (let i = 0; i < count; i++) {
+        for (let i = 1; i <= count; i++) {
           try {
             const infos = await c.getOutcomeInfos(i);
             const outcomeBalances = [];
