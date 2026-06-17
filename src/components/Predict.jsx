@@ -358,7 +358,6 @@ export default function Predict({
                           <div className="sp-label">Buy {opts[oi]}</div>
                           <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} USDC</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} USDC</span></div>
-                          <div className="sp-row"><span>Est. tokens</span><span>{Number(est).toFixed(4)}</span></div>
                           <div className="sp-row sp-total" style={{color:'#34d399'}}><span>⇢ Potential Return (if win)</span><span>${Number(est).toFixed(2)}</span></div>
                           <button className="btn-primary full" style={{marginTop:6}}
                             onClick={async () => {

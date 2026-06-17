@@ -89,23 +89,31 @@ export function usePredictionData(wallet, getSigner) {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
       const c = v2();
-      // V2 uses AMM pricing — estimate by simulating buy
-      const price = await c.getTokenPrice(marketId, outcome);
       const usdcAmt = ethers.parseUnits(amount, 6);
-      // Approximate tokens from AMM: pool = pool + virtual, supply = supply + virtual
       const infos = await c.getOutcomeInfos(marketId);
       const info = infos[outcome];
       if (!info) return;
+      // info is Result [tokenAddr, pool, supply] — access by index for safety
+      const pool = BigInt(info[1] || 0n);
+      const supply = BigInt(info[2] || 0n);
       const VIRTUAL_USDC = 1000n * 1000000n;
       const VIRTUAL_TOKENS = 1000000n * 10n ** 18n;
-      const totalPool = BigInt(info.pool) + VIRTUAL_USDC;
-      const totalToken = BigInt(info.supply) + VIRTUAL_TOKENS;
+      const totalPool = pool + VIRTUAL_USDC;
+      const totalToken = supply + VIRTUAL_TOKENS;
       const k = totalPool * totalToken;
       const newPool = totalPool + usdcAmt;
       const newToken = k / newPool;
       const tokensOut = totalToken - newToken;
-      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: ethers.formatUnits(tokensOut, 18) }));
-    } catch (e) { /* ignore */ }
+      // Potential Return = tokensOut / (supply + tokensOut + virtual) * (pool + net + virtual)
+      const fee = usdcAmt * 80n / 10000n; // 0.8%
+      const netIn = usdcAmt - fee;
+      const potReturnPool = pool + netIn + VIRTUAL_USDC;
+      const potReturnSupply = supply + tokensOut + VIRTUAL_TOKENS;
+      const potReturn = potReturnSupply > 0n ? (tokensOut * potReturnPool) / potReturnSupply : 0n;
+      // formatUnits with 6 decimals for USDC
+      const retUsdc = Number(potReturn) / 1e6;
+      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(retUsdc.toFixed(4)) }));
+    } catch (e) { console.error('Payout est error:', e?.message?.slice(0,60)); }
   }, [v2]);
 
   const buyTokens = async (marketId, outcome) => {
