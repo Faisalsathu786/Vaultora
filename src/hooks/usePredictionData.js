@@ -97,9 +97,8 @@ export function usePredictionData(wallet, getSigner) {
       const info = infos[outcome];
       if (!info) return;
 
-      const poolI = BigInt(info[1] || 0n);        // this outcome's pool
-      const supplyI = BigInt(info[2] || 0n);       // this outcome's supply
-      const NUM_OUTCOMES = BigInt(infos.length);
+      const poolI = BigInt(info[1] || 0n);
+      const supplyI = BigInt(info[2] || 0n);
       const VIRTUAL_USDC = 1000n * 1000000n;       // 1000 USDC
       const VIRTUAL_TOKENS = 1000000n * 10n ** 18n; // 1M tokens
 
@@ -107,18 +106,17 @@ export function usePredictionData(wallet, getSigner) {
       const totalPool = poolI + VIRTUAL_USDC;
       const totalToken = supplyI + VIRTUAL_TOKENS;
       const k = totalPool * totalToken;
-      const fee = usdcAmt * 80n / 10000n;          // 0.8%
+      const fee = usdcAmt * 80n / 10000n;
       const netIn = usdcAmt - fee;
       const newPool = totalPool + netIn;
       const newToken = k / newPool;
       const tokensOut = totalToken - newToken;
 
-      // Potential Return = (tokensOut / finalWinnerSupply) * totalMarketPool
-      // finalWinnerSupply = supplyI + tokensOut + VIRTUAL_TOKENS
-      // totalMarketPool = sum(all pools) + netIn + NUM_OUTCOMES * VIRTUAL_USDC
-      const finalWinnerSupply = supplyI + tokensOut + VIRTUAL_TOKENS;
-      const finalTotalPool = totalPoolRaw + netIn + (NUM_OUTCOMES * VIRTUAL_USDC);
-      const potReturn = finalWinnerSupply > 0n ? (tokensOut * finalTotalPool) / finalWinnerSupply : 0n;
+      // Potential Return = (tokensOut / (supplyI + tokensOut)) * (totalPoolRaw + netIn)
+      // Only REAL values — virtual liquidity is NOT real USDC
+      const finalSupply = supplyI + tokensOut;
+      const finalTotalReal = totalPoolRaw + netIn;
+      const potReturn = finalSupply > 0n ? (tokensOut * finalTotalReal) / finalSupply : 0n;
 
       const retUsdc = Number(potReturn) / 1e6;
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(retUsdc.toFixed(4)) }));
