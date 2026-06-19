@@ -25,6 +25,25 @@ export function useV3PredictionData(wallet, getSigner) {
   const [marketTab, setMarketTab] = useState('active');
   const [positions, setPositions] = useState({});
   const [tokBal, setTokBal] = useState('0');
+  const [walletBal, setWalletBal] = useState('0');
+  const [eurcWalletBal, setEwalletBal] = useState('0');
+
+  const refreshBalance = async (signer) => {
+    try {
+      if (!V3_ADDRESS) return;
+      const usdcAddr = '0x3600000000000000000000000000000000000000';
+      const erc20 = new ethers.Contract(usdcAddr, ERC20_ABI, signer);
+      const addr = await signer.getAddress();
+      const bal = await erc20.balanceOf(addr);
+      setWalletBal(ethers.formatUnits(bal, 6));
+      // Also fetch EURC balance
+      try {
+        const eurc = new ethers.Contract('0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', ERC20_ABI, signer);
+        const ebal = await eurc.balanceOf(addr);
+        setEwalletBal(ethers.formatUnits(ebal, 6));
+      } catch(_) {}
+    } catch(e) { console.error('Balance refresh error:', e); }
+  };
   const [pmTxHistory, setPmTxHistory] = useState([]);
   const [pmTxLoading, setPmTxLoading] = useState(false);
   const [pmTxPage, setPmTxPage] = useState(0);
@@ -36,6 +55,11 @@ export function useV3PredictionData(wallet, getSigner) {
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000);
     return () => clearInterval(t);
   }, []);
+
+  // Fetch initial wallet balance once
+  useEffect(() => {
+    getSigner().then(s => refreshBalance(s)).catch(() => {});
+  }, []); // eslint-disable-line
 
   const v3 = useCallback(() => {
     const p = getProvider();
@@ -150,10 +174,12 @@ export function useV3PredictionData(wallet, getSigner) {
     setMkLoading(false);
   }, [v3, wallet]);
 
-  useEffect(() => { fetchMarkets(); }, [fetchMarkets]);
+  useEffect(() => {
+    if (wallet) { getSigner().then(s => refreshBalance(s)).catch(() => {}); } fetchMarkets(); }, [fetchMarkets]);
 
   // Fetch EURC rate
   useEffect(() => {
+    if (wallet) { getSigner().then(s => refreshBalance(s)).catch(() => {}); }
     if (!V3_ADDRESS) return;
     (async () => {
       try {
@@ -257,6 +283,7 @@ export function useV3PredictionData(wallet, getSigner) {
 
   // Check owner
   useEffect(() => {
+    if (wallet) { getSigner().then(s => refreshBalance(s)).catch(() => {}); }
     if (!wallet || !V3_ADDRESS) return;
     (async () => {
       try {
@@ -274,7 +301,7 @@ export function useV3PredictionData(wallet, getSigner) {
     showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
     payoutEst, positions, now, marketTab, setMarketTab, tokBal,
     fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket,
-    resolveMarket, claimWinnings,
+    resolveMarket, claimWinnings, getSigner,
     isOwner: window.__v3_is_owner,
     siteLogo: '', siteName: 'Vaultora',
     pmTxHistory: [], pmTxLoading: false, pmTxPage: 0, setPmTxPage: () => {},
