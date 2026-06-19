@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 import { TOKENS, STORAGE_PREFIX, SESSION_KEY, SESSION_TTL_MS, ARC_CHAIN_ID, ARC_NETWORK } from './constants/contracts.js';
 import { useToast } from './hooks/useToast.js';
 import { useVaultData } from './hooks/useVaultData.js';
-import { usePredictionData } from './hooks/usePredictionData.js';
+import { useV3PredictionData } from './hooks/useV3PredictionData.js';
 import Toast from './components/Toast.jsx';
 import Header from './components/Header.jsx';
 import Landing from './components/Landing.jsx';
@@ -83,7 +83,7 @@ export default function App() {
   } = vaultData;
 
   // Prediction data
-  const predData = usePredictionData(wallet, getSigner);
+  const predData = useV3PredictionData(wallet, getSigner);
   const { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
           activeMktId, setActiveMktId, actionTab, setActionTab,
           showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,

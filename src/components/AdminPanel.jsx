@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { V2_ADDRESS, V2_ABI } from '../constants/contracts.js';
+import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
 
 const RPC = 'https://rpc.testnet.arc.network';
 function getProvider() {
@@ -15,8 +15,8 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
   useEffect(() => {
     if (!wallet) return;
-    const c = new ethers.Contract(V2_ADDRESS, V2_ABI, getProvider());
-    c.owner().then(owner => {
+    const c = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
+    c.owner_is().then(owner => {
       setIsOwner(owner.toLowerCase() === wallet.toLowerCase());
     }).catch(e => console.error('Owner check:', e));
   }, [wallet]);
@@ -25,7 +25,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
     setActionLoading(true);
     try {
       const signer = await getSigner();
-      const c = new ethers.Contract(V2_ADDRESS, V2_ABI, signer);
+      const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       await (await fn(c)).wait();
       notify(`${label} successful!`, 'success');
     } catch (e) {
