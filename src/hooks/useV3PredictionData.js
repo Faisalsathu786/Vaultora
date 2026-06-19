@@ -25,6 +25,8 @@ export function useV3PredictionData(wallet, getSigner) {
   const [marketTab, setMarketTab] = useState('active');
   const [positions, setPositions] = useState({});
   const [tokBal, setTokBal] = useState('0');
+  const [tokenIdx, setTokenIdx] = useState(0); // 0=USDC, 1=EURC
+  const [eurcRate, setEurcRate] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 10000);
@@ -100,6 +102,18 @@ export function useV3PredictionData(wallet, getSigner) {
 
   useEffect(() => { fetchMarkets(); }, [fetchMarkets]);
 
+  // Fetch EURC rate
+  useEffect(() => {
+    if (!V3_ADDRESS) return;
+    (async () => {
+      try {
+        const c2 = v3();
+        const rate = await c2.eurcRate();
+        setEurcRate(Number(rate) / 1e18);
+      } catch(e) {}
+    })();
+  }, [v3, wallet]);
+
   const fetchPayoutEst = useCallback(async (marketId, outcome, amount) => {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
@@ -109,15 +123,24 @@ export function useV3PredictionData(wallet, getSigner) {
     } catch (e) { /* ignore */ }
   }, [v3]);
 
-  const buyTokens = async (marketId, outcome) => {
+  const TOKENS = [
+    { addr: USDC, name: 'USDC', decimals: 6 },
+    { addr: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', name: 'EURC', decimals: 6 },
+  ];
+
+  const buyTokens = async (marketId, outcome, overrideTokenIdx) => {
     if (!betAmt || isNaN(betAmt) || Number(betAmt) <= 0) return false;
+    const tkIdx = overrideTokenIdx !== undefined ? overrideTokenIdx : tokenIdx;
     try {
       const signer = await getSigner();
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const amt = ethers.parseUnits(betAmt, 6);
-      const token = new ethers.Contract(USDC, ERC20_ABI, signer);
+      const tokenAddr = TOKENS[tkIdx].addr;
+      const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
       await (await token.approve(V3_ADDRESS, amt)).wait();
-      const tx = await c.buyTokens(marketId, outcome, amt);
+      const tx = tkIdx === 0
+        ? await c.buyTokens(marketId, outcome, amt)
+        : await c.buyTokensWithToken(marketId, outcome, tkIdx, amt);
       await tx.wait();
       setBetAmt(''); fetchMarkets();
       return true;
@@ -206,6 +229,6 @@ export function useV3PredictionData(wallet, getSigner) {
     siteLogo: '', siteName: 'Vaultora',
     pmTxHistory: [], pmTxLoading: false, pmTxPage: 0, setPmTxPage: () => {},
     PM_TX_PAGE_SIZE: 10, claimWinningsOnChain: claimWinnings,
-    fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
+    TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
   };
 }

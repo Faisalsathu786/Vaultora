@@ -53,6 +53,7 @@ contract VaultoraPredictionV3 {
     bool public paused;
     uint256 public minBet;
     uint32 public feeBps = 80; // 0.8%
+    uint256 public eurcRate; // EURC->USDC rate (18 dec, e.g. 1.1e18 = 1:1.1)
 
     Market[] public markets;
 
@@ -180,38 +181,52 @@ contract VaultoraPredictionV3 {
      * @notice Buy outcome tokens with USDC.
      *         Uses constant product k = (pool + V_USDC) × (supply + V_TOKENS).
      */
-    function buyTokens(uint256 marketId, uint8 outcome, uint256 usdcAmount) external {
+    function buyTokens(uint256 marketId, uint8 outcome, uint256 amount) external {
+        _buyTokens(marketId, outcome, 0, amount);
+    }
+
+    function buyTokensWithToken(uint256 marketId, uint8 outcome, uint8 tokenIdx, uint256 amount) external {
+        _buyTokens(marketId, outcome, tokenIdx, amount);
+    }
+
+    function _buyTokens(uint256 marketId, uint8 outcome, uint8 tokenIdx, uint256 amount) internal {
         if (paused) revert Paused();
         Market storage m = markets[marketId];
         if (m.status != 0) revert MarketNotOpen();
         if (block.timestamp >= m.endTime) revert MarketEnded();
         if (outcome >= m.options.length) revert InvalidOutcome();
+        if (tokenIdx >= paymentTokens.length) revert InvalidOutcome();
 
-        // Fee
-        uint256 fee = (usdcAmount * m.localFeeBps) / 10000;
-        uint256 net = usdcAmount - fee;
-        pendingFees[paymentTokens[m.tokenIdx].addr] += fee;
+        address tokenAddr = paymentTokens[tokenIdx].addr;
 
-        // Transfer USDC from user
-        IERC20(paymentTokens[m.tokenIdx].addr).transferFrom(
-            msg.sender, address(this), usdcAmount);
+        uint256 fee = (amount * m.localFeeBps) / 10000;
+        uint256 net = amount - fee;
+        uint256 netUsdc = net; // Default: USDC direct
+
+        if (tokenIdx == 1) {
+            // EURC -> USDC conversion
+            netUsdc = eurcRate > 0 ? (net * eurcRate) / 1e18 : net;
+        }
+
+        pendingFees[tokenAddr] += fee;
+        IERC20(tokenAddr).transferFrom(msg.sender, address(this), amount);
 
         // AMM: constant product with virtual liquidity
         uint256 totalP = pools[marketId][outcome] + VIRTUAL_USDC;
         uint256 totalS = supply[marketId][outcome] + VIRTUAL_TOKENS;
         uint256 k = totalP * totalS;
 
-        uint256 newTotalP = totalP + net;
+        uint256 newTotalP = totalP + netUsdc;
         uint256 newTotalS = k / newTotalP;
         uint256 tokensOut = totalS - newTotalS;
 
-        // Update state
-        pools[marketId][outcome] += net;
+        // Update state - pool always in USDC terms
+        pools[marketId][outcome] += netUsdc;
         supply[marketId][outcome] += tokensOut;
-        totalPool[marketId] += net;
+        totalPool[marketId] += netUsdc;
         balanceOf[marketId][msg.sender][outcome] += tokensOut;
 
-        emit Bought(marketId, msg.sender, outcome, usdcAmount, tokensOut);
+        emit Bought(marketId, msg.sender, outcome, amount, tokensOut);
     }
 
     /**
@@ -238,7 +253,7 @@ contract VaultoraPredictionV3 {
         uint256 afterTax = poolReturn - (poolReturn * taxBps / 10000);
         uint256 fee = (afterTax * m.localFeeBps) / 10000;
         uint256 payout = afterTax - fee;
-        pendingFees[paymentTokens[m.tokenIdx].addr] += fee;
+        pendingFees[paymentTokens[0].addr] += fee; // fee always in USDC
 
         // Update state
         pools[marketId][outcome] -= poolReturn;
@@ -246,7 +261,7 @@ contract VaultoraPredictionV3 {
         totalPool[marketId] -= payout;
         balanceOf[marketId][msg.sender][outcome] -= tokenAmount;
 
-        IERC20(paymentTokens[m.tokenIdx].addr).transfer(msg.sender, payout);
+        IERC20(paymentTokens[0].addr).transfer(msg.sender, payout); // always USDC
         emit Sold(marketId, msg.sender, outcome, payout, tokenAmount);
     }
 
@@ -402,6 +417,8 @@ contract VaultoraPredictionV3 {
         feeBps = fee;
         emit ConfigUpdated(min, fee);
     }
+
+    function setEurcRate(uint256 rate) external onlyOwner { eurcRate = rate; }
 
     function setBranding(
         string calldata logo, string calldata name, string calldata desc

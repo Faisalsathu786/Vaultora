@@ -109,6 +109,7 @@ export const V3_ABI = [
   "function setPaused(bool p) external",
   "function setMinBet(uint256 min) external",
   "function setConfig(uint256 min, uint32 fee) external",
+  "function setEurcRate(uint256 rate) external",
   "function setBranding(string logo, string name, string desc) external",
   "function addToken(address addr, string symbol) external",
   "function toggleToken(uint8 idx, bool enabled) external",
@@ -117,6 +118,7 @@ export const V3_ABI = [
 
   // ─── Trading ───
   "function buyTokens(uint256 marketId, uint8 outcome, uint256 usdcAmount) external",
+  "function buyTokensWithToken(uint256 marketId, uint8 outcome, uint8 tokenIdx, uint256 amount) external",
   "function sellTokens(uint256 marketId, uint8 outcome, uint256 tokenAmount) external",
   "function claimWinnings(uint256 marketId) external",
   "function refundCancelled(uint256 marketId) external",
@@ -138,6 +140,7 @@ export const V3_ABI = [
   "function paused() view returns (bool)",
   "function minBet() view returns (uint256)",
   "function feeBps() view returns (uint32)",
+  "function eurcRate() view returns (uint256)",
   "function pools(uint256, uint8) view returns (uint256)",
   "function supply(uint256, uint8) view returns (uint256)",
   "function totalPool(uint256) view returns (uint256)",
