@@ -368,7 +368,8 @@ export default function App() {
           {page === "history" && (
             <History wallet={wallet} txHistory={txHistory}
               fetchOnChainHistory={fetchOnChainHistory}
-              supabaseData={supabaseData} />
+              supabaseData={supabaseData}
+              pmTxHistory={pmTxHistory} pmTxLoading={pmTxLoading} />
           )}
 
           {page === "admin" && (

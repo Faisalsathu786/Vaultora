@@ -25,6 +25,10 @@ export function useV3PredictionData(wallet, getSigner) {
   const [marketTab, setMarketTab] = useState('active');
   const [positions, setPositions] = useState({});
   const [tokBal, setTokBal] = useState('0');
+  const [pmTxHistory, setPmTxHistory] = useState([]);
+  const [pmTxLoading, setPmTxLoading] = useState(false);
+  const [pmTxPage, setPmTxPage] = useState(0);
+  const PM_TX_PAGE_SIZE = 10;
   const [tokenIdx, setTokenIdx] = useState(0); // 0=USDC, 1=EURC
   const [eurcRate, setEurcRate] = useState(0);
 
@@ -95,6 +99,52 @@ export function useV3PredictionData(wallet, getSigner) {
           } catch (e) { /* skip */ }
         }
         setPositions(pos);
+
+        // Fetch on-chain trade history for user
+        try {
+          setPmTxLoading(true);
+          const provider = getProvider();
+          const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
+          const latestBlock = await provider.getBlockNumber();
+          const fromBlock = Math.max(0, latestBlock - 50000);
+
+          const buyFilter = pm.filters.Bought(null, wallet);
+          const sellFilter = pm.filters.Sold(null, wallet);
+          const claimFilter = pm.filters.Claimed(null, wallet);
+          const [buys, sells, claims] = await Promise.all([
+            pm.queryFilter(buyFilter, fromBlock, 'latest'),
+            pm.queryFilter(sellFilter, fromBlock, 'latest'),
+            pm.queryFilter(claimFilter, fromBlock, 'latest'),
+          ]);
+
+          const txs = [];
+          for (const e of buys) {
+            txs.push({
+              type: 'Buy', id: e.args.id, outcome: Number(e.args.outcome),
+              amount: ethers.formatUnits(e.args.cost, 6),
+              tokens: ethers.formatUnits(e.args.tokens, 18),
+              time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
+            });
+          }
+          for (const e of sells) {
+            txs.push({
+              type: 'Sell', id: e.args.id, outcome: Number(e.args.outcome),
+              amount: '-' + ethers.formatUnits(e.args.payout, 6),
+              tokens: '-' + ethers.formatUnits(e.args.tokens, 18),
+              time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
+            });
+          }
+          for (const e of claims) {
+            txs.push({
+              type: 'Claim', id: e.args.id, outcome: '-',
+              amount: ethers.formatUnits(e.args.amount, 6),
+              time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
+            });
+          }
+          txs.sort((a, b) => new Date(b.time) - new Date(a.time));
+          setPmTxHistory(txs);
+        } catch(e) { /* history fetch optional */ }
+        setPmTxLoading(false);
       }
     } catch (e) { console.error('Fetch error:', e); }
     setMkLoading(false);

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { ethers } from 'ethers';
-import { V2_ADDRESS, V2_ABI } from '../constants/contracts.js';
+import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
 import { trimAddr } from '../utils/format.js';
 
 const RPC = 'https://rpc.testnet.arc.network';
@@ -11,9 +11,10 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
   const [userRank, setUserRank] = useState(null);
 
   const fetchAllUsers = async () => {
+    if (!V3_ADDRESS) { setTraders([]); setTop100([]); return; }
     try {
       const provider = new ethers.JsonRpcProvider(RPC);
-      const pm = new ethers.Contract(V2_ADDRESS, V2_ABI, provider);
+      const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
 
       // Query recent events (last 50000 blocks, don't scan from 0)
       const latestBlock = await provider.getBlockNumber();
@@ -21,8 +22,8 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
       
       const userMap = {};
       
-      const buyFilter = pm.filters.TokensBought();
-      const sellFilter = pm.filters.TokensSold();
+      const buyFilter = pm.filters.Bought();
+      const sellFilter = pm.filters.Sold();
       const [buyEvents, sellEvents] = await Promise.all([
         pm.queryFilter(buyFilter, fromBlock, 'latest'),
         pm.queryFilter(sellFilter, fromBlock, 'latest'),
@@ -30,15 +31,15 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
 
       for (const e of [...buyEvents, ...sellEvents]) {
         const addr = e.args.user.toLowerCase();
-        const usdcAmt = Number(ethers.formatUnits(e.args.usdcIn || e.args.usdcOut || 0, 6));
-        const mktId = Number(e.args.mkt);
+        const usdcAmt = Number(ethers.formatUnits(e.args.cost || e.args.payout || 0, 6));
+        const mktId = Number(e.args.id);
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
         userMap[addr].totalBets += 1;
         userMap[addr].staked += usdcAmt;
         userMap[addr].markets.add(mktId);
       }
 
-      // Query Claimed events for extra stats
+      // Query Claimed events
       const claimFilter = pm.filters.Claimed();
       const claimEvents = await pm.queryFilter(claimFilter, fromBlock, 'latest');
       for (const e of claimEvents) {

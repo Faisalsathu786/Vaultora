@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 export default function History({
   wallet, txHistory, fetchOnChainHistory,
-  supabaseData,
+  supabaseData, pmTxHistory, pmTxLoading,
 }) {
   const [txRefreshing, setTxRefreshing] = useState(false);
   const [supabaseTxs, setSupabaseTxs] = useState([]);
@@ -72,6 +72,25 @@ export default function History({
         }
       </div>
 
+      <div className="card" style={{marginTop:12}}>
+        <p className="card-lbl">Prediction Trades</p>
+        {!pmTxHistory || pmTxHistory.length === 0
+          ? <p className="empty">No prediction trades yet</p>
+          : pmTxHistory.slice(0, 20).map((tx, i) => (
+            <div key={i} className="tx-row">
+              <div className={"tx-icon " + (tx.type === "Buy" ? "in" : "out")}>
+                {tx.type === "Buy" ? "B" : tx.type === "Sell" ? "S" : "C"}
+              </div>
+              <div className="tx-detail">
+                <span className="tx-type">{tx.type} #{String(tx.id)}</span>
+                <span className="tx-time">{tx.time}</span>
+              </div>
+              <span className="tx-amt">{tx.amount} USDC</span>
+            </div>
+          ))
+        }
+        {pmTxLoading && <p className="empty" style={{fontSize:'.65rem'}}>Loading...</p>}
+      </div>
     </div>
   );
 }
