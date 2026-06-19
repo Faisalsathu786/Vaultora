@@ -94,15 +94,72 @@ export const NAV = [
   { id: "admin",       label: "Admin" },
 ];
 
+// VaultoraPredictionV3 ABI — virtual AMM prediction market
+export const V3_ABI = [
+  // ─── Admin ───
+  "function initialize(address usdc, address eurc) external",
+  "function createMarket(string question, string[] outcomes, uint256 endTime) external returns (uint256)",
+  "function createMarketWithImage(string question, string[] outcomes, uint256 endTime, string imageUrl) external returns (uint256)",
+  "function setMarketImage(uint256 id, string url) external",
+  "function setMarketCategory(uint256 id, string cat) external",
+  "function setMarketQuestion(uint256 id, string q) external",
+  "function extendMarket(uint256 id, uint256 newEndTime) external",
+  "function cancelMarket(uint256 id) external",
+  "function resolveMarket(uint256 id, uint8 winningOutcome) external",
+  "function setPaused(bool p) external",
+  "function setMinBet(uint256 min) external",
+  "function setConfig(uint256 min, uint32 fee) external",
+  "function setBranding(string logo, string name, string desc) external",
+  "function addToken(address addr, string symbol) external",
+  "function toggleToken(uint8 idx, bool enabled) external",
+  "function withdrawFees(uint8 tokenIdx) external",
+  "function transferOwnership(address newOwner) external",
+
+  // ─── Trading ───
+  "function buyTokens(uint256 marketId, uint8 outcome, uint256 usdcAmount) external",
+  "function sellTokens(uint256 marketId, uint8 outcome, uint256 tokenAmount) external",
+  "function claimWinnings(uint256 marketId) external",
+  "function refundCancelled(uint256 marketId) external",
+
+  // ─── View / Query ───
+  "function marketCount() view returns (uint256)",
+  "function getMarket(uint256 id) view returns (tuple(string question, string image, string category, string[] options, uint256 endTime, uint8 status, uint8 winningOutcome, uint8 tokenIdx, uint32 localFeeBps))",
+  "function getOutcomeInfos(uint256 marketId) view returns (address[] tokenAddrs, uint256[] poolVals, uint256[] supplyVals)",
+  "function getTokenPrice(uint256 marketId, uint8 outcome) view returns (uint256)",
+  "function getMarketCap(uint256 marketId, uint8 outcome) view returns (uint256)",
+  "function estimatePayout(uint256 marketId, uint8 outcome, uint256 amount) view returns (uint256)",
+  "function getUserPosition(uint256 marketId, address user) view returns (uint256[] holdings, uint256[] balances)",
+  "function getTokens() view returns (tuple(address addr, string symbol, bool enabled)[])",
+  "function getBranding() view returns (string logo, string name, string desc)",
+  "function resolvedClaimed(uint256 marketId, address user) view returns (bool)",
+  "function owner_is() view returns (address)",
+
+  // ─── State ───
+  "function paused() view returns (bool)",
+  "function minBet() view returns (uint256)",
+  "function feeBps() view returns (uint32)",
+  "function pools(uint256, uint8) view returns (uint256)",
+  "function supply(uint256, uint8) view returns (uint256)",
+  "function totalPool(uint256) view returns (uint256)",
+  "function balanceOf(uint256, address, uint8) view returns (uint256)",
+
+  // ─── Events ───
+  "event MarketCreated(uint256 indexed id, string question, uint256 endTime, uint8 outcomes)",
+  "event Bought(uint256 indexed id, address indexed user, uint8 outcome, uint256 cost, uint256 tokens)",
+  "event Sold(uint256 indexed id, address indexed user, uint8 outcome, uint256 payout, uint256 tokens)",
+  "event Resolved(uint256 indexed id, uint8 winningOutcome)",
+  "event Cancelled(uint256 indexed id)",
+  "event Claimed(uint256 indexed id, address indexed user, uint256 amount)",
+  "event Refunded(uint256 indexed id, address indexed user, uint256 amount)",
+];
+
+// Keep old V2_ABI for backward reference
 export const V2_ABI = [
   "function marketCount() view returns (uint256)",
   "function getAllMarkets() view returns (tuple(uint256 id, string question, uint256 endTime, address creator, uint8 status, uint8 winningIdx, uint256 totalPool)[])",
-  "function markets(uint256) view returns (uint256 id, string question, uint256 endTime, address creator, uint8 status, uint8 winningIdx, uint256 totalPool)",
-  "function getOutcomes(uint256 mktId) view returns (string[])",
   "function getOutcomeInfos(uint256 mktId) view returns (tuple(address tokenAddr, uint256 pool, uint256 supply)[])",
   "function getTokenPrice(uint256 mktId, uint8 outcome) view returns (uint256)",
   "function getMarketCap(uint256 mktId, uint8 outcome) view returns (uint256)",
-  "function owner() view returns (address)",
   "function resolvedClaimed(uint256, address) view returns (bool)",
   "function buyTokens(uint256 mktId, uint8 outcome, uint256 usdcAmt) external",
   "function sellTokens(uint256 mktId, uint8 outcome, uint256 tokenAmt) external",
@@ -114,3 +171,5 @@ export const V2_ABI = [
   "function resolveMarket(uint256 mktId, uint8 winner) external",
   "function cancelMarket(uint256 mktId) external",
 ];
+
+export const V3_ADDRESS = ""; // Deploy V3 first, then paste address here
