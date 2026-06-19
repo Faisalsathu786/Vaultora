@@ -273,7 +273,7 @@ export default function Predict({
                                   <button className="btn-secondary" style={{fontSize:'.65rem',padding:'3px 10px'}}
                                     onClick={e=>{e.stopPropagation();setSellSel(null);setSellPreview(null);}}>Cancel</button>
                                   <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 12px'}}
-                                    onClick={async (e)=>{e.stopPropagation();const a=Number(sellAmt);if(a<=0||a>(Number(p.balances[oi])/1e6))return notify('Invalid amount','error');const ok=await sellTokens(mId,oi,a);if(ok){notify('Sold!','success');setSellSel(null);setSellAmt('');fetchMarkets();}else notify('Sell failed','error');}}>Sell</button>
+                                    onClick={async (e)=>{e.stopPropagation();const a=Number(sellAmt);if(a<=0||a>(Number(p.balances[oi])/1e18))return notify('Invalid amount','error');const ok=await sellTokens(mId,oi,a);if(ok){notify('Sold!','success');setSellSel(null);setSellAmt('');fetchMarkets();}else notify('Sell failed','error');}}>Sell</button>
                                 </div>
                               </div>
                             )}
@@ -424,8 +424,8 @@ export default function Predict({
                       <input className="num-input" type="number" placeholder="0.00"
                         value={sellAmt} onChange={e=>{setSellAmt(e.target.value);setSellPreview(null);setSellSel(null);}} />
                       <button className="max-btn" onClick={()=>{
-                        if(sellSel){const [_,oi]=sellSel.split('_').map(Number);const b=positions[mId]?.balances?.[oi]||0;if(b>0)setSellAmt(String((b/1e6).toFixed(4)));}
-                        else{let mBal=0;opts.forEach((_,oi)=>{const b=positions[mId]?.balances?.[oi]||0;if(b>mBal)mBal=b;});if(mBal>0)setSellAmt(String((mBal/1e6).toFixed(4)));}
+                        if(sellSel){const [_,oi]=sellSel.split('_').map(Number);const b=positions[mId]?.balances?.[oi]||0;if(b>0)setSellAmt(String((b/1e18).toFixed(4)));}
+                        else{let mBal=0;opts.forEach((_,oi)=>{const b=positions[mId]?.balances?.[oi]||0;if(b>mBal)mBal=b;});if(mBal>0)setSellAmt(String((mBal/1e18).toFixed(4)));}
                       }}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:4}}>Click outcome to preview sell</div>
@@ -454,7 +454,7 @@ export default function Predict({
                               setSellPreview({opt,outcome:oi,gross,fee,tax,net:Math.max(0,gross-fee-tax)});
                             }}>
                             <span>{opt}</span>
-                            <span className="bal-hint">{(Number(bal)/1e6).toFixed(4)}</span>
+                            <span className="bal-hint">{(Number(bal)/1e18).toFixed(4)}</span>
                           </button>
                         );
                       })}
