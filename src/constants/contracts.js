@@ -172,4 +172,4 @@ export const V2_ABI = [
   "function cancelMarket(uint256 mktId) external",
 ];
 
-export const V3_ADDRESS = ""; // Deploy V3 first, then paste address here
+export const V3_ADDRESS = "0x9A44e71dd59a2c703Ba3aB2628Ee44bfc3e30338";
