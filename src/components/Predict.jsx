@@ -256,7 +256,7 @@ export default function Predict({
                             {!isSettled && (
                               <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                                 <span style={{fontSize:'.7rem',color:'#aaa'}}>Value: ${pv.value.toFixed(2)}</span>
-                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#34d399'}}>Payout: ${pp.toFixed(2)}</span>}
+                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#34d399'}}>Payout: ${pp.toFixed(2)} ({pv.value>0?((pp/pv.value-1)*100).toFixed(1):'∞'}%)</span>}
                               </div>
                             )}
                             {isSelected && !isSettled && !m.resolved && (
@@ -407,7 +407,7 @@ export default function Predict({
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)}</span></div>
+                          <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)} ({Number(est)>0?((Number(est)/Number(betAmt)-1)*100).toFixed(1):'0.0'}%)</span></div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
                               const ok = await buyTokens(mId, oi);
