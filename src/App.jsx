@@ -359,7 +359,6 @@ export default function App() {
               claimWinnings={claimWinnings}
               tokenIdx={tokenIdx} setTokenIdx={setTokenIdx}
               eurcRate={eurcRate} PAYMENT_TOKENS={PAYMENT_TOKENS}
-              walletBal={walletBal} eurcWalletBal={eurcWalletBal}
               supabaseLbData={supabaseData?.lbData || []}
               supabase={supabaseData?.supabase || null}
               syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}

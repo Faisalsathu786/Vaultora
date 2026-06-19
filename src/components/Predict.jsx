@@ -9,7 +9,7 @@ function getProvider() {
 
 export default function Predict({
   wallet, getSigner,
-  walletBal, eurcWalletBal, markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
+  markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
   activeMktId, setActiveMktId, actionTab, setActionTab,
   showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating, isOwner,
   payoutEst, positions, now, marketTab, setMarketTab,
@@ -256,7 +256,7 @@ export default function Predict({
                             {!isSettled && (
                               <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                                 <span style={{fontSize:'.7rem',color:'#aaa'}}>Value: ${pv.value.toFixed(2)}</span>
-                                {pp > 0 && <span style={{fontSize:'.7rem',color:'#34d399'}}>Payout: ${pp.toFixed(2)} ({pv.value>0?((pp/pv.value-1)*100).toFixed(1):'∞'}%)</span>}
+                                {pp > 0 && (() => {const upPct = pv.value > 0 ? ((pp/pv.value-1)*100).toFixed(1) : '∞'; return (<span style={{fontSize:'.7rem',color:'#34d399'}}>Payout: ${pp.toFixed(2)} ({upPct}%)</span>);})()}
                               </div>
                             )}
                             {isSelected && !isSettled && !m.resolved && (
@@ -369,7 +369,7 @@ export default function Predict({
                     <div className="amount-row" style={{marginBottom:6}}>
                       <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
-                      <button className="max-btn" onClick={() => {const b=Number(tokenIdx===1?eurcWalletBal:walletBal);setBetAmt(b>0?String(b.toFixed(2)):'0');}}>MAX</button>
+                      <button className="max-btn" onClick={() => {const def = tokenIdx===0?'10':'10';setBetAmt(def);}}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:6}}>Click outcome to select</div>
                     <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
@@ -407,7 +407,7 @@ export default function Predict({
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)} ({Number(est)>0?((Number(est)/Number(betAmt)-1)*100).toFixed(1):'0.0'}%)</span></div>
+                          <div className="sp-row sp-total">{(() => {const pct = Number(est) > 0 ? ((Number(est)/Number(betAmt)-1)*100).toFixed(1) : '0.0'; return (<><span>Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)} ({pct}%)</span></>);})()}</div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
                               const ok = await buyTokens(mId, oi);
