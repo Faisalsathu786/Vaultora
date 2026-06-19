@@ -217,7 +217,9 @@ export default function Predict({
                         const isWinner = m.resolved && oi === m.winningOutcome;
                         const isSelected = sellSel === `${m.id}_${oi}`;
                         return (
-                          <div key={oi} className="pos-card" style={{marginBottom:6,padding:8,background:isSelected?'rgba(0,168,139,.08)':'rgba(255,255,255,.03)',borderRadius:8,border:isSelected?'1px solid rgba(0,168,139,.3)':'1px solid rgba(255,255,255,.06)',cursor:'pointer'}}
+                          <div key={oi}
+                            className={`pos-card col-clr-${oi % 8}`}
+                            style={{marginBottom:6,padding:8,background:isSelected?'var(--clr-bg, rgba(0,168,139,.08))':'rgba(255,255,255,.03)',borderRadius:8,border:isSelected?'1px solid var(--clr, rgba(0,168,139,.3))':'1px solid rgba(255,255,255,.06)',cursor:'pointer',borderLeft:'3px solid var(--clr, #555)'}}
                             onClick={() => {
                               if(!m.resolved) {
                                 setSellSel(isSelected?null:`${m.id}_${oi}`);
@@ -226,7 +228,7 @@ export default function Predict({
                               }
                             }}>
                             <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'#34d399':isSelected?'#00c9a7':'#ccc'}}>{opt} {isWinner?'✓':''}</span>
+                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'var(--clr, #34d399)':isSelected?'var(--clr, #00c9a7)':'var(--clr, #ccc)'}}>{opt} {isWinner?'✓':''}</span>
                               <span style={{fontSize:'.7rem',color:'#888'}}>{balDisplay} tkn</span>
                             </div>
                             {!isSettled && (
@@ -305,18 +307,22 @@ export default function Predict({
 
             <div className="mkt-odds">
               {opts.map((opt, oi) => (
-                <span key={oi} className="mkt-out">{opt}</span>
+                <span key={oi} className={`mkt-out col-clr-${oi % 8}`}>{opt}</span>
               ))}
             </div>
 
             <div className="mkt-time" style={{ fontSize: '.68rem', color: '#777', marginTop: 4 }}>
-              {!endedAt ? `${Math.floor(m.secsLeft / 86400)}d ${Math.floor((m.secsLeft % 86400) / 3600)}h left` : 'Ended'}
+              {!endedAt ? (() => {
+                const d = m.secsLeft / 86400;
+                const tc = d > 7 ? 'time-green' : d > 1 ? 'time-yellow' : 'time-red';
+                return <span className={tc}>{Math.floor(d)}d {Math.floor((m.secsLeft % 86400) / 3600)}h left</span>;
+              })() : 'Ended'}
               {' · '}{tokSym}
               {resolved && ` · Winner: ${opts[m.winningOutcome]}`}
             </div>
 
             {!endedAt && activeMktId === mId && (
-              <div className="mkt-bet-row">
+              <div className={`mkt-bet-row ${actionTab === 'buy' ? 'buy-mode' : 'sell-mode'}`}>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                   <button className={`cm-toggle ${actionTab === 'buy' ? 'active' : ''}`}
                     onClick={() => setActionTab('buy')}>Buy</button>
@@ -339,11 +345,10 @@ export default function Predict({
                         const est = payoutEst[`${mId}_${oi}`] && betAmt ? parseFloat(payoutEst[`${mId}_${oi}`]).toFixed(2) : null;
                         return (
                           <button key={oi}
-                            className={`pred-vote-btn ${isSelected?'sel':''}`}
-                            onClick={() => setBuySel(isSelected?null:`${mId}_${oi}`)}
-                            style={isSelected?{background:'rgba(0,168,139,.15)',borderColor:'#00a88b'}:{}}>
+                            className={`pred-vote-btn col-clr-${oi % 8} ${isSelected?'sel':''}`}
+                            onClick={() => setBuySel(isSelected?null:`${mId}_${oi}`)}>
                             {opt}
-                            {est && <span style={{display:'block',fontSize:'.62rem',color:'#34d399',marginTop:2}}>≈ ${est}</span>}
+                            {est && <span style={{display:'block',fontSize:'.62rem',color:'var(--clr, #34d399)',marginTop:2}}>≈ ${est}</span>}
                           </button>
                         );
                       })}
@@ -355,11 +360,11 @@ export default function Predict({
                       const feeAmt = Number(betAmt) * 0.008;
                       return (
                         <div className="sell-preview" style={{marginTop:8}}>
-                          <div className="sp-label">Buy {opts[oi]}</div>
+                          <div className="sp-label" style={{color:'var(--clr, #34d399)'}}>Buy {opts[oi]}</div>
                           <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} USDC</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} USDC</span></div>
-                          <div className="sp-row sp-total" style={{color:'#34d399'}}><span>⇢ Potential Return (if win)</span><span>${Number(est).toFixed(2)}</span></div>
-                          <button className="btn-primary full" style={{marginTop:6}}
+                          <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)}</span></div>
+                          <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
                               const ok = await buyTokens(mId, oi);
                               if(ok){notify('Bought!','success');setBuySel(null);setBetAmt('');fetchMarkets();if(supabaseData?.syncTrade) supabaseData.syncTrade('buy',mId,oi,betAmt,'0');if(syncBet&&wallet) syncBet(mId,wallet,oi,betAmt,Date.now(),'');}
@@ -387,7 +392,7 @@ export default function Predict({
                         const isSelected = sellSel === `${mId}_${oi}`;
                         return (
                           <button key={oi}
-                            className={`pred-vote-btn ${isSelected?'sel':''}`}
+                            className={`pred-vote-btn col-clr-${oi % 8} ${isSelected?'sel':''}`}
                             onClick={()=>{
                               if(isSelected){setSellSel(null);setSellPreview(null);return;}
                               setSellSel(`${mId}_${oi}`);
@@ -403,8 +408,7 @@ export default function Predict({
                               const fee=gross*0.008;
                               const tax=Math.min(gross*0.3,gross*0.3);
                               setSellPreview({opt,outcome:oi,gross,fee,tax,net:Math.max(0,gross-fee-tax)});
-                            }}
-                            style={isSelected?{background:'rgba(248,81,73,.12)',borderColor:'#f85149'}:{}}>
+                            }}>
                             <span>{opt}</span>
                             <span className="bal-hint">{(Number(bal)/1e6).toFixed(4)}</span>
                           </button>

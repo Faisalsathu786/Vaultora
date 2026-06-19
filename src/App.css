@@ -1052,7 +1052,8 @@ body {
   transition: all .18s;
 }
 .pred-vote-btn:hover       { transform: translateY(-2px); }
-.pred-vote-btn:hover  { border-color: var(--accent); color: var(--text); background: rgba(172,170,255,.08); }
+.pred-vote-btn:hover  { border-color: var(--clr, var(--accent)); color: var(--clr, var(--text)); background: var(--clr-bg, rgba(172,170,255,.08)); }
+.pred-vote-btn.sel { border-color: var(--clr) !important; background: var(--clr-bg) !important; color: var(--clr) !important; }
 
 
 
@@ -1726,6 +1727,26 @@ body {
   white-space: nowrap;
 }
 .mkt-out { color: var(--text); }
+.mkt-out.col-clr { color: var(--clr, var(--text)); }
+
+/* Outcome color palette */
+.col-clr-0 { --clr: #34d399; --clr-bg: rgba(52,211,153,.12); }
+.col-clr-1 { --clr: #f97316; --clr-bg: rgba(249,115,22,.12); }
+.col-clr-2 { --clr: #60a5fa; --clr-bg: rgba(96,165,250,.12); }
+.col-clr-3 { --clr: #a78bfa; --clr-bg: rgba(167,139,250,.12); }
+.col-clr-4 { --clr: #f472b6; --clr-bg: rgba(244,114,182,.12); }
+.col-clr-5 { --clr: #22d3ee; --clr-bg: rgba(34,211,238,.12); }
+.col-clr-6 { --clr: #fbbf24; --clr-bg: rgba(251,191,36,.12); }
+.col-clr-7 { --clr: #f87171; --clr-bg: rgba(248,113,113,.12); }
+
+/* Time-left colors */
+.time-green { color: #34d399; }
+.time-yellow { color: #fbbf24; }
+.time-red { color: #f87171; }
+
+/* Buy/Sell section accent */
+.mkt-bet-row.buy-mode { border-top: 2px solid rgba(52,211,153,.3); }
+.mkt-bet-row.sell-mode { border-top: 2px solid rgba(248,113,113,.3); }
 
 
 .mkt-bar-wrap {
