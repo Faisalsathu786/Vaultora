@@ -173,7 +173,7 @@ export function useV3PredictionData(wallet, getSigner) {
     } catch (e) { /* ignore */ }
   }, [v3]);
 
-  const TOKENS = [
+  const PAYMENT_TOKENS = [
     { addr: USDC, name: 'USDC', decimals: 6 },
     { addr: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', name: 'EURC', decimals: 6 },
   ];
@@ -185,7 +185,7 @@ export function useV3PredictionData(wallet, getSigner) {
       const signer = await getSigner();
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const amt = ethers.parseUnits(betAmt, 6);
-      const tokenAddr = TOKENS[tkIdx].addr;
+      const tokenAddr = PAYMENT_TOKENS[tkIdx].addr;
       const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
       await (await token.approve(V3_ADDRESS, amt)).wait();
       const tx = tkIdx === 0
@@ -279,6 +279,6 @@ export function useV3PredictionData(wallet, getSigner) {
     siteLogo: '', siteName: 'Vaultora',
     pmTxHistory: [], pmTxLoading: false, pmTxPage: 0, setPmTxPage: () => {},
     PM_TX_PAGE_SIZE: 10, claimWinningsOnChain: claimWinnings,
-    TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
+    PAYMENT_TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
   };
 }

@@ -14,7 +14,7 @@ export default function Predict({
   showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating, isOwner,
   payoutEst, positions, now, marketTab, setMarketTab,
   fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
-  tokenIdx, setTokenIdx, eurcRate, TOKENS,
+  tokenIdx, setTokenIdx, eurcRate, PAYMENT_TOKENS,
   notify, supabaseLbData, supabase, syncBet, syncVaultDeposit, syncMarketResult, supabaseData,
 }) {
   const [resolving, setResolving] = useState({});
@@ -357,7 +357,7 @@ export default function Predict({
                   <>
                     <div className="cm-row" style={{marginBottom:4}}>
                         <label className="cm-label">Pay with</label>
-                        {TOKENS && TOKENS.map((t, i) => (
+                        {PAYMENT_TOKENS && PAYMENT_TOKENS.map((t, i) => (
                           <button key={i} className={"cm-toggle " + (tokenIdx === i ? "active" : "")}
                             style={{fontSize:'.6rem',padding:'2px 10px'}}
                             onClick={() => setTokenIdx(i)}>{t.name}</button>
@@ -367,7 +367,7 @@ export default function Predict({
                         )}
                       </div>
                     <div className="amount-row" style={{marginBottom:6}}>
-                      <input className="num-input" type="number" placeholder={"Amount (" + (TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
+                      <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
                       <button className="max-btn" onClick={() => setBetAmt('10')}>MAX</button>
                     </div>
@@ -396,7 +396,7 @@ export default function Predict({
                           <div className="sp-label" style={{color:'var(--clr, #34d399)'}}>Buy {opts[oi]}</div>
                           <div className="cm-row" style={{marginBottom:4}}>
                         <label className="cm-label">Pay with</label>
-                        {TOKENS && TOKENS.map((t, i) => (
+                        {PAYMENT_TOKENS && PAYMENT_TOKENS.map((t, i) => (
                           <button key={i} className={`cm-toggle ${tokenIdx === i ? 'active' : ''}`}
                             style={{fontSize:'.6rem',padding:'2px 10px'}}
                             onClick={() => setTokenIdx(i)}>{t.name}</button>
@@ -405,8 +405,8 @@ export default function Predict({
                           <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
                         )}
                       </div>
-                      <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
+                      <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
+                          <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)}</span></div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {

@@ -357,6 +357,8 @@ export default function App() {
               buyTokens={buyTokens} sellTokens={sellTokens}
               createMarket={createMarket} resolveMarket={resolveMarket}
               claimWinnings={claimWinnings}
+              tokenIdx={tokenIdx} setTokenIdx={setTokenIdx}
+              eurcRate={eurcRate} PAYMENT_TOKENS={PAYMENT_TOKENS}
               supabaseLbData={supabaseData?.lbData || []}
               supabase={supabaseData?.supabase || null}
               syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}
