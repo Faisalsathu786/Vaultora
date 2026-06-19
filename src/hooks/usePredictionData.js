@@ -162,7 +162,15 @@ export function usePredictionData(wallet, getSigner) {
       const c = new ethers.Contract(V2_ADDRESS, V2_ABI, signer);
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
-      const tx = await c.createMarket(newMkt.question, endTime, opts);
+      const imgUrl = newMkt.imageUrl?.trim() || '';
+      
+      let tx;
+      if (imgUrl) {
+        // Use new function that sets image in one step
+        tx = await c.createMarketWithImage(newMkt.question, endTime, opts, imgUrl);
+      } else {
+        tx = await c.createMarket(newMkt.question, endTime, opts);
+      }
       await tx.wait();
       setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
       setShowCreateForm(false); fetchMarkets();

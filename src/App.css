@@ -3054,3 +3054,85 @@ body {
   color: #666;
   font-style: italic;
 }
+
+/* ═══════════════════════════════════════════
+   VAULTORA — Polymarket-style card enhancements
+   ═══════════════════════════════════════════ */
+.mkt-card {
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.mkt-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+.mkt-img-wrap {
+  aspect-ratio: 16/9;
+  transition: opacity .3s;
+}
+.mkt-img {
+  transition: transform .4s ease;
+}
+.mkt-card:hover .mkt-img {
+  transform: scale(1.03);
+}
+
+/* Create form image section */
+.cm-img-section {
+  padding: 8px 0;
+}
+.upl-btn {
+  white-space: nowrap;
+}
+.upl-btn:hover {
+  opacity: .85;
+}
+.cm-img-preview {
+  position: relative;
+}
+.cm-img-preview .remove-img {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,.65);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: .8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s;
+}
+.cm-img-preview .remove-img:hover {
+  background: rgba(255,60,60,.8);
+}
+
+/* Ended market card overlay */
+.mkt-card.ended-card::before {
+  opacity: .35;
+}
+.mkt-card.ended-card .mkt-img {
+  filter: grayscale(.6);
+}
+
+/* Badge style update */
+.mkt-ended-badge, .mkt-cancelled-badge {
+  font-size: .55rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.mkt-ended-badge {
+  background: #f59e0b;
+  color: #000;
+}
+.mkt-cancelled-badge {
+  background: #ef4444;
+  color: #fff;
+}
