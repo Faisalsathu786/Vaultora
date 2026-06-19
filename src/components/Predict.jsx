@@ -355,8 +355,19 @@ export default function Predict({
 
                 {actionTab === 'buy' ? (
                   <>
+                    <div className="cm-row" style={{marginBottom:4}}>
+                        <label className="cm-label">Pay with</label>
+                        {TOKENS && TOKENS.map((t, i) => (
+                          <button key={i} className={"cm-toggle " + (tokenIdx === i ? "active" : "")}
+                            style={{fontSize:'.6rem',padding:'2px 10px'}}
+                            onClick={() => setTokenIdx(i)}>{t.name}</button>
+                        ))}
+                        {eurcRate > 0 && tokenIdx === 1 && (
+                          <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
+                        )}
+                      </div>
                     <div className="amount-row" style={{marginBottom:6}}>
-                      <input className="num-input" type="number" placeholder="Amount (USDC)"
+                      <input className="num-input" type="number" placeholder={"Amount (" + (TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
                       <button className="max-btn" onClick={() => setBetAmt('10')}>MAX</button>
                     </div>
