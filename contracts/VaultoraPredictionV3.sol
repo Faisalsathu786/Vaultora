@@ -227,14 +227,10 @@ contract VaultoraPredictionV3 {
         if (balanceOf[marketId][msg.sender][outcome] < tokenAmount)
             revert NoBalance();
 
-        // AMM: reverse calculation
-        uint256 totalP = pools[marketId][outcome] + VIRTUAL_USDC;
-        uint256 totalS = supply[marketId][outcome] + VIRTUAL_TOKENS;
-        uint256 k = totalP * totalS;
-
-        uint256 newTotalS = totalS - tokenAmount;
-        uint256 newTotalP = k / newTotalS;
-        uint256 poolReturn = totalP - newTotalP;
+        // Proportional redemption: X% tokens = X% of pool
+        uint256 sTotal = supply[marketId][outcome];
+        uint256 pTotal = pools[marketId][outcome];
+        uint256 poolReturn = sTotal > 0 ? (pTotal * tokenAmount / sTotal) : 0;
 
         // Tax
         uint256 taxBps = redeemTax(m.endTime - block.timestamp,
@@ -332,12 +328,10 @@ contract VaultoraPredictionV3 {
         uint256 s = supply[marketId][outcome];
         if (s == 0 && p == 0) {
             // Virtual-only: price = V_USDC / V_TOKENS ≈ 0.001 USDC
-            return VIRTUAL_USDC * 1e12 / VIRTUAL_TOKENS;
+            return VIRTUAL_USDC * 1e30 / VIRTUAL_TOKENS;
         }
-        uint256 realP = p > 0 ? p : 1;
-        uint256 realS = s > 0 ? s : 1;
-        // Price in USDC (6 dec) per token (18 dec): pool(1e6) / supply(1e18) * 1e12
-        return (realP * realS) > 0 ? (realP * 1e12 / realS) : 0;
+        // Price: pool(6dec) * 1e30 / supply(18dec) returns 18dec wei value
+        return p > 0 ? (p * 1e30 / s) : 0;
     }
 
     function getMarketCap(uint256 marketId, uint8 outcome)
@@ -345,7 +339,7 @@ contract VaultoraPredictionV3 {
     {
         uint256 p = pools[marketId][outcome];
         uint256 s = supply[marketId][outcome];
-        return p > 0 && s > 0 ? (p * 1e12 / s) : 0;
+        return p; // market cap = pool value in 6-decimal USDC
     }
 
     function estimatePayout(
