@@ -101,6 +101,28 @@ contract VaultoraMarketsV2 {
         return id;
     }
 
+    function createMarketWithImage(
+        string calldata question,
+        uint256 endTime,
+        string[] calldata outcomes,
+        string calldata imageUrl
+    ) external onlyOwner returns (uint256) {
+        if (endTime <= block.timestamp) revert InvalidMarket();
+        if (outcomes.length < 2 || outcomes.length > 10) revert InvalidOutcome();
+        uint256 id = markets.length;
+        markets.push();
+        Market storage m = markets[id];
+        m.question = question;
+        m.endTime = endTime;
+        m.tokenIdx = 0;
+        m.localFeeBps = feeBps;
+        m.status = 0;
+        m.image = imageUrl;
+        for (uint256 i = 0; i < outcomes.length; i++) m.options.push(outcomes[i]);
+        emit MarketCreated(id, question, endTime, uint8(outcomes.length));
+        return id;
+    }
+
     function setMarketImage(uint256 id, string calldata url) external onlyOwner { markets[id].image = url; }
     function setMarketCategory(uint256 id, string calldata cat) external onlyOwner { markets[id].category = cat; }
     function setMarketQuestion(uint256 id, string calldata q) external onlyOwner {

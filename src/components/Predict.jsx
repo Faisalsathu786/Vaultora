@@ -131,10 +131,31 @@ export default function Predict({
             <label className="cm-label">Days</label>
             <input className="num-input" type="number" value={newMkt.days} style={{ width: 80 }}
               onChange={e => setNewMkt(p => ({ ...p, days: e.target.value }))} />
-            <label className="cm-label" style={{ marginLeft: 12 }}>Image (optional)</label>
-            <input type="file" accept="image/*" onChange={uploadImage} style={{ fontSize: '.7rem' }} />
           </div>
-          <button className="btn-primary full" disabled={creating || !newMkt.question.trim()} onClick={handleCreate}>
+          <div className="cm-img-section" style={{ marginTop: 8 }}>
+            <label className="cm-label">Market Image (optional)</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              <input className="num-input" placeholder="Paste image URL..."
+                value={newMkt.imageUrl || ''}
+                onChange={e => setNewMkt(p => ({ ...p, imageUrl: e.target.value }))}
+                style={{ flex: 1, minWidth: 150 }} />
+              <label className="btn-secondary upl-btn" style={{ fontSize: '.7rem', padding: '6px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
+                📁 Upload
+                <input type="file" accept="image/*" onChange={uploadImage} style={{ display: 'none' }} />
+              </label>
+            </div>
+            {newMkt.imageUrl && (
+              <div className="cm-img-preview" style={{ marginTop: 8, position: 'relative', display: 'inline-block' }}>
+                <img src={newMkt.imageUrl} alt="preview"
+                  style={{ maxHeight: 160, maxWidth: '100%', borderRadius: 12, objectFit: 'cover' }}
+                  onError={e => e.target.style.display = 'none'} />
+                <button className="cm-opt-del" onClick={() => setNewMkt(p => ({ ...p, imageUrl: '' }))}
+                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.6)', color: '#fff', border: 'none', borderRadius: 8, width: 24, height: 24, cursor: 'pointer', fontSize: '.7rem' }}>✕</button>
+              </div>
+            )}
+          </div>
+          <button className="btn-primary full" disabled={creating || !newMkt.question.trim()} onClick={handleCreate}
+            style={{ marginTop: 12 }}>
             {creating ? 'Creating...' : 'Create Market'}
           </button>
         </div>

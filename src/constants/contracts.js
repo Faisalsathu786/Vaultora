@@ -109,6 +109,8 @@ export const V2_ABI = [
   "function claimWinnings(uint256 mktId) external",
   "function refund(uint256 mktId) external",
   "function createMarket(string question, uint256 endTime, string[] outcomes) external returns (uint256)",
+  "function createMarketWithImage(string question, uint256 endTime, string[] outcomes, string imageUrl) external returns (uint256)",
+  "function setMarketImage(uint256 mktId, string imageUrl) external",
   "function resolveMarket(uint256 mktId, uint8 winner) external",
   "function cancelMarket(uint256 mktId) external",
 ];
