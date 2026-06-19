@@ -332,12 +332,12 @@ contract VaultoraPredictionV3 {
         uint256 s = supply[marketId][outcome];
         if (s == 0 && p == 0) {
             // Virtual-only: price = V_USDC / V_TOKENS ≈ 0.001 USDC
-            return VIRTUAL_USDC * 1e18 / VIRTUAL_TOKENS;
+            return VIRTUAL_USDC * 1e12 / VIRTUAL_TOKENS;
         }
         uint256 realP = p > 0 ? p : 1;
         uint256 realS = s > 0 ? s : 1;
-        // Price in USDC (6 decimals) per token (18 decimals)
-        return (realP * realS) > 0 ? (realP * 1e18 / realS) : 0;
+        // Price in USDC (6 dec) per token (18 dec): pool(1e6) / supply(1e18) * 1e12
+        return (realP * realS) > 0 ? (realP * 1e12 / realS) : 0;
     }
 
     function getMarketCap(uint256 marketId, uint8 outcome)
@@ -345,7 +345,7 @@ contract VaultoraPredictionV3 {
     {
         uint256 p = pools[marketId][outcome];
         uint256 s = supply[marketId][outcome];
-        return p > 0 && s > 0 ? (p * 1e18 / s) * 1e18 / 1e18 : 0;
+        return p > 0 && s > 0 ? (p * 1e12 / s) : 0;
     }
 
     function estimatePayout(
@@ -356,7 +356,8 @@ contract VaultoraPredictionV3 {
         uint256 totalS = supply[marketId][outcome] + VIRTUAL_TOKENS;
         uint256 k = totalP * totalS;
 
-        uint256 fee = (amount * feeBps) / 10000;
+        Market storage me = markets[marketId];
+        uint256 fee = (amount * me.localFeeBps) / 10000;
         uint256 net = amount - fee;
         uint256 newTotalP = totalP + net;
         uint256 newTotalS = k / newTotalP;
