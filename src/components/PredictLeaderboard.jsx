@@ -30,9 +30,9 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
       ]);
 
       for (const e of [...buyEvents, ...sellEvents]) {
-        const addr = e.args.user.toLowerCase();
-        const usdcAmt = Number(ethers.formatUnits(e.args.cost || e.args.payout || 0, 6));
-        const mktId = Number(e.args.id);
+        const addr = e.args.buyer?.toLowerCase() || e.args.seller?.toLowerCase() || e.args.claimant?.toLowerCase() || "";
+        const usdcAmt = Number(ethers.formatUnits(e.args.amount || e.args.grossReturn || e.args.netReturn || 0, 6));
+        const mktId = Number(e.args.marketId || e.args.id || 0);
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
         userMap[addr].totalBets += 1;
         userMap[addr].staked += usdcAmt;
@@ -43,7 +43,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
       const claimFilter = pm.filters.Claimed();
       const claimEvents = await pm.queryFilter(claimFilter, fromBlock, 'latest');
       for (const e of claimEvents) {
-        const addr = e.args.user.toLowerCase();
+        const addr = e.args.buyer?.toLowerCase() || e.args.seller?.toLowerCase() || e.args.claimant?.toLowerCase() || "";
         if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
       }
       if (supabaseLbData && supabaseLbData.length > 0) {

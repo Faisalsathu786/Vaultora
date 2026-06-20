@@ -129,25 +129,30 @@ export function useV3PredictionData(wallet, getSigner) {
 
           const txs = [];
           for (const e of buys) {
+            const tokensArr = e.args.tokensReceived || [];
+            const tokenStr = tokensArr.length > 0 ? tokensArr.map(t => ethers.formatUnits(t, 18)).join(',') : '';
             txs.push({
-              type: 'Buy', id: e.args.id, outcome: Number(e.args.outcome),
-              amount: ethers.formatUnits(e.args.cost, 6),
-              tokens: ethers.formatUnits(e.args.tokens, 18),
+              type: 'Buy', id: Number(e.args.marketId || e.args.id || 0),
+              outcome: tokenStr,
+              amount: ethers.formatUnits(e.args.amount || e.args.cost || 0n, 6),
+              tokens: tokenStr,
               time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
             });
           }
           for (const e of sells) {
             txs.push({
-              type: 'Sell', id: e.args.id, outcome: Number(e.args.outcome),
-              amount: '-' + ethers.formatUnits(e.args.payout, 6),
-              tokens: '-' + ethers.formatUnits(e.args.tokens, 18),
+              type: 'Sell', id: Number(e.args.marketId || e.args.id || 0),
+              outcome: Number(e.args.outcome || 0),
+              amount: '-' + ethers.formatUnits(e.args.grossReturn || e.args.payout || 0n, 6),
+              tokens: '',
               time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
             });
           }
           for (const e of claims) {
             txs.push({
-              type: 'Claim', id: e.args.id, outcome: '-',
-              amount: ethers.formatUnits(e.args.amount, 6),
+              type: 'Claim', id: Number(e.args.marketId || e.args.id || 0),
+              outcome: '-',
+              amount: ethers.formatUnits(e.args.amount || 0n, 6),
               time: new Date((await e.getBlock()).timestamp * 1000).toLocaleString(),
             });
           }
@@ -197,7 +202,8 @@ export function useV3PredictionData(wallet, getSigner) {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
       const c = v3();
-      const ret = await c.estimatePayout(marketId, outcome, ethers.parseUnits(amount, 6));
+      const userAddr = c.runner ? await c.runner.getAddress() : (await ethers.BrowserProvider ? null : null);
+      const ret = await c.estimatePayout(marketId, userAddr || ethers.ZeroAddress);
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(Number(ret) / 1e6) }));
     } catch (e) { /* ignore */ }
   }, [v3]);
@@ -219,7 +225,7 @@ export function useV3PredictionData(wallet, getSigner) {
       await (await token.approve(V3_ADDRESS, amt)).wait();
       const tx = tkIdx === 0
         ? await c.buyTokens(marketId, outcome, amt)
-        : await c.buyTokensWithToken(marketId, outcome, tkIdx, amt);
+        : await c.buyTokensWithToken(marketId, outcome, amt);
       await tx.wait();
       setBetAmt(''); fetchMarkets();
       return true;
@@ -306,9 +312,11 @@ export function useV3PredictionData(wallet, getSigner) {
     resolveMarket, claimWinnings,
     isOwner: window.__v3_is_owner,
     siteLogo: '', siteName: 'Vaultora',
-    pmTxHistory: [], pmTxLoading: false, pmTxPage: 0, setPmTxPage: () => {},
-    PM_TX_PAGE_SIZE: 10, claimWinningsOnChain: claimWinnings,
-    PAYMENT_TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
+    pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
+    PM_TX_PAGE_SIZE, claimWinningsOnChain: claimWinnings,
+    PAYMENT_TOKENS, 
+    fetchPendingFees: async () => { try { const c=v3(); return await c.accumulatedFees('0x3600000000000000000000000000000000000000'); } catch {} },
+    fetchContractConfig: async () => { try { const c=v3(); return { bfee: await c.buyFee(), sfee: await c.sellFee() }; } catch {} },
     tokenIdx, setTokenIdx, eurcRate,
     usdcBal, eurcBal,
   };
