@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ethers } from 'ethers';
 import PredictLeaderboard from './PredictLeaderboard.jsx';
 
 const RPC = 'https://rpc.testnet.arc.network';

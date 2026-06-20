@@ -91,6 +91,7 @@ export default function App() {
           fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
           isOwner, siteLogo, siteName, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, claimWinningsOnChain,
           fetchPendingFees, fetchContractConfig,
+          eurcRate, PAYMENT_TOKENS,
   } = predData;
 
   // Supabase sync

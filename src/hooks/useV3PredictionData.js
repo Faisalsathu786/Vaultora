@@ -280,5 +280,6 @@ export function useV3PredictionData(wallet, getSigner) {
     pmTxHistory: [], pmTxLoading: false, pmTxPage: 0, setPmTxPage: () => {},
     PM_TX_PAGE_SIZE: 10, claimWinningsOnChain: claimWinnings,
     PAYMENT_TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
+    tokenIdx, setTokenIdx, eurcRate,
   };
 }
