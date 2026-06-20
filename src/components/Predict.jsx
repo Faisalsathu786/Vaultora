@@ -9,7 +9,7 @@ function getProvider() {
 }
 
 export default function Predict({
-  wallet, getSigner, walletBal, eurcWalletBal,
+  wallet, getSigner, usdcBal, eurcBal,
   markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
   activeMktId, setActiveMktId, actionTab, setActionTab,
   showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating, isOwner,
@@ -370,7 +370,7 @@ export default function Predict({
                     <div className="amount-row" style={{marginBottom:6}}>
                       <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
-                      <button className="max-btn" onClick={()=>{const b=Number(tokenIdx===0?walletBal:eurcWalletBal||10);setBetAmt(b>0?b.toFixed(2):'10');}}>MAX</button>
+                      <button className="max-btn" onClick={()=>{const b=Number(tokenIdx===0?usdcBal:eurcBal||10);setBetAmt(b>0?b.toFixed(2):'10');}}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:6}}>Click outcome to select</div>
                     <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
