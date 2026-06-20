@@ -9,7 +9,7 @@ function getProvider() {
 }
 
 export default function Predict({
-  wallet, getSigner,
+  wallet, getSigner, walletBal, eurcWalletBal,
   markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
   activeMktId, setActiveMktId, actionTab, setActionTab,
   showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating, isOwner,
@@ -370,7 +370,7 @@ export default function Predict({
                     <div className="amount-row" style={{marginBottom:6}}>
                       <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
-                      <button className="max-btn" onClick={() => setBetAmt('10')}>MAX</button>
+                      <button className="max-btn" onClick={()=>{const b=Number(tokenIdx===0?walletBal:eurcWalletBal||10);setBetAmt(b>0?b.toFixed(2):'10');}}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:6}}>Click outcome to select</div>
                     <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
@@ -408,7 +408,7 @@ export default function Predict({
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row sp-total"><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${Number(est).toFixed(2)}</span></div>
+                          <div className="sp-row sp-total">{(()=>{const b=Number(betAmt),e=Number(est),p=b>0?((e/b-1)*100).toFixed(1):'0.0';return(<><span>⇢ Potential Return (if win)</span><span style={{color:'var(--clr, #34d399)'}}>${e.toFixed(2)} ({p}%)</span></>);})()}</div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
                               const ok = await buyTokens(mId, oi, tokenIdx);

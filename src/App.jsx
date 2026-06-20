@@ -92,6 +92,7 @@ export default function App() {
           isOwner, siteLogo, siteName, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, claimWinningsOnChain,
           fetchPendingFees, fetchContractConfig,
           eurcRate, PAYMENT_TOKENS,
+          walletBal, eurcWalletBal,
   } = predData;
 
   // Supabase sync
@@ -360,6 +361,7 @@ export default function App() {
               claimWinnings={claimWinnings}
               tokenIdx={tokenIdx} setTokenIdx={setTokenIdx}
               eurcRate={eurcRate} PAYMENT_TOKENS={PAYMENT_TOKENS}
+              walletBal={walletBal} eurcWalletBal={eurcWalletBal}
               supabaseLbData={supabaseData?.lbData || []}
               supabase={supabaseData?.supabase || null}
               syncBet={syncBet} syncVaultDeposit={syncVaultDeposit}

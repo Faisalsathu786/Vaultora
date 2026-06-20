@@ -29,6 +29,8 @@ export function useV3PredictionData(wallet, getSigner) {
   const [pmTxLoading, setPmTxLoading] = useState(false);
   const [pmTxPage, setPmTxPage] = useState(0);
   const PM_TX_PAGE_SIZE = 10;
+  const [walletBal, setWalletBal] = useState('0');
+  const [eurcWalletBal, setEwalletBal] = useState('0');
   const [tokenIdx, setTokenIdx] = useState(0); // 0=USDC, 1=EURC
   const [eurcRate, setEurcRate] = useState(0);
 
@@ -151,6 +153,25 @@ export function useV3PredictionData(wallet, getSigner) {
   }, [v3, wallet]);
 
   useEffect(() => { fetchMarkets(); }, [fetchMarkets]);
+
+  // Fetch wallet balances on wallet change
+  useEffect(() => {
+    if (!wallet || !V3_ADDRESS) return;
+    (async () => {
+      try {
+        const signer = await getSigner();
+        const addr = await signer.getAddress();
+        const usdc = new ethers.Contract(USDC, ERC20_ABI, signer);
+        const bal = await usdc.balanceOf(addr);
+        setWalletBal(ethers.formatUnits(bal, 6));
+        try {
+          const eurc = new ethers.Contract('0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', ERC20_ABI, signer);
+          const ebal = await eurc.balanceOf(addr);
+          setEwalletBal(ethers.formatUnits(ebal, 6));
+        } catch(_) {}
+      } catch(e) { console.error('walletBal error:', e); }
+    })();
+  }, [wallet, getSigner]);
 
   // Fetch EURC rate
   useEffect(() => {
@@ -281,5 +302,6 @@ export function useV3PredictionData(wallet, getSigner) {
     PM_TX_PAGE_SIZE: 10, claimWinningsOnChain: claimWinnings,
     PAYMENT_TOKENS, fetchPendingFees: async () => {}, fetchContractConfig: async () => {},
     tokenIdx, setTokenIdx, eurcRate,
+    walletBal, eurcWalletBal,
   };
 }
