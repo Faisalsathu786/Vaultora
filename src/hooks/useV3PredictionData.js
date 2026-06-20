@@ -202,8 +202,8 @@ export function useV3PredictionData(wallet, getSigner) {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
       const c = v3();
-      const userAddr = c.runner ? await c.runner.getAddress() : (await ethers.BrowserProvider ? null : null);
-      const ret = await c.estimatePayout(marketId, userAddr || ethers.ZeroAddress);
+      if (!wallet) return;
+      const ret = await c.estimatePayout(marketId, wallet);
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(Number(ret) / 1e6) }));
     } catch (e) { /* ignore */ }
   }, [v3]);
@@ -288,7 +288,7 @@ export function useV3PredictionData(wallet, getSigner) {
     } catch (e) { console.error('Claim error:', e); return false; }
   };
 
-  const isOwner = wallet && V3_ADDRESS ? null : false;
+  const [isOwner, setIsOwner] = useState(false);
 
   // Check owner
   useEffect(() => {
@@ -297,7 +297,9 @@ export function useV3PredictionData(wallet, getSigner) {
       try {
         const c = v3();
         const owner = await c.owner_is();
-        window.__v3_is_owner = owner.toLowerCase() === wallet.toLowerCase();
+        const isOwnerVal = owner.toLowerCase() === wallet.toLowerCase();
+        window.__v3_is_owner = isOwnerVal;
+        setIsOwner(isOwnerVal);
       } catch (e) { /* */ }
     })();
   }, [wallet, v3]);
@@ -310,7 +312,7 @@ export function useV3PredictionData(wallet, getSigner) {
     payoutEst, positions, now, marketTab, setMarketTab, tokBal,
     fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket,
     resolveMarket, claimWinnings,
-    isOwner: window.__v3_is_owner,
+    isOwner,
     siteLogo: '', siteName: 'Vaultora',
     pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage,
     PM_TX_PAGE_SIZE, claimWinningsOnChain: claimWinnings,
