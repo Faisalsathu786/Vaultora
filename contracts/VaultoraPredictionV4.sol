@@ -6,33 +6,41 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-/// @title VaultoraOutcomeToken
-/// @notice Minimal ERC20 token for a single market outcome.
-///         Deployed fresh per outcome via `new`; initialized in constructor.
-///         Only the VaultoraPredictionV4 contract (minter) can mint/burn.
-contract VaultoraOutcomeToken is ERC20Upgradeable {
+/// @title VaultoraOutcomeToken - Clones implementation (non-Initializable ERC20)
+///         Each clone initialized via setData() after deployment.
+contract VaultoraOutcomeToken {
+    string public name;   string public symbol;  uint8 public constant decimals = 18;
     address public minter;
-
-    constructor(address _minter, string memory _name, string memory _symbol) {
-        __ERC20_init(_name, _symbol);
-        minter = _minter;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
+    
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    
+    function setData(address _minter, string memory _name, string memory _symbol) external {
+        require(minter == address(0), "VOT: init");
+        name = _name;  symbol = _symbol;  minter = _minter;
     }
-
-    modifier onlyMinter() {
-        require(msg.sender == minter, "VOT: caller is not minter");
-        _;
+    modifier onlyMinter() { require(msg.sender == minter, "VOT: 001"); _; }
+    function mint(address to, uint256 a) external onlyMinter { _mint(to, a); }
+    function _mint(address to, uint256 a) internal { balanceOf[to] += a; emit Transfer(address(0), to, a); }
+    function burn(address f, uint256 a) external onlyMinter { _burn(f, a); }
+    function _burn(address f, uint256 a) internal { balanceOf[f] -= a; emit Transfer(f, address(0), a); }
+    function totalSupply() external view returns (uint256 s) {
+        assembly { s := sload(balanceOf.slot) }
     }
-
-    /// @notice Mint tokens to `to` - callable only by the prediction market contract
-    function mint(address to, uint256 amount) external onlyMinter {
-        _mint(to, amount);
+    function transfer(address to, uint256 a) external returns (bool) {
+        balanceOf[msg.sender] -= a; balanceOf[to] += a; emit Transfer(msg.sender, to, a); return true;
     }
-
-    /// @notice Burn tokens from `from` - callable only by the prediction market contract
-    function burn(address from, uint256 amount) external onlyMinter {
-        _burn(from, amount);
+    function approve(address spender, uint256 a) external returns (bool) {
+        allowance[msg.sender][spender] = a; emit Approval(msg.sender, spender, a); return true;
+    }
+    function transferFrom(address from, address to, uint256 a) external returns (bool) {
+        allowance[from][msg.sender] -= a;
+        balanceOf[from] -= a; balanceOf[to] += a; emit Transfer(from, to, a); return true;
     }
 }
 
@@ -53,8 +61,6 @@ contract VaultoraPredictionV4 is
     // ════════════════════════════════════════════════════════════════
 
     /// @notice Semantic version for this implementation
-    string public constant VERSION = "4.0.0";
-
     /// @notice Virtual USDC reserve injected into every outcome pool (6 decimals)
     uint256 public constant VIRTUAL_USDC = 1000 * 1e6; // 1_000 USDC
 
@@ -221,8 +227,6 @@ contract VaultoraPredictionV4 is
         uint256 oldRate,
         uint256 newRate
     );
-    event Paused(address account);
-    event Unpaused(address account);
     event Upgraded(address indexed implementation);
 
     // ════════════════════════════════════════════════════════════════
@@ -239,7 +243,6 @@ contract VaultoraPredictionV4 is
         __Ownable_init(msg.sender);
         __Pausable_init();
         __AccessControl_init();
-        __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MARKET_CREATOR_ROLE, msg.sender);
@@ -362,11 +365,12 @@ contract VaultoraPredictionV4 is
                 abi.encodePacked("VLT-", _uint2str(marketId), "-", _uint2str(i))
             );
 
-            VaultoraOutcomeToken ot = new VaultoraOutcomeToken(
-                address(this),
-                tokenName,
-                tokenSymbol
+            address cloneAddr = Clones.cloneDeterministic(
+                outcomeTokenImpl,
+                keccak256(abi.encodePacked(marketId, i))
             );
+            VaultoraOutcomeToken ot = VaultoraOutcomeToken(payable(cloneAddr));
+            ot.setData(address(this), tokenName, tokenSymbol);
             outcomeAddrs[i]    = address(ot);
             initPools[i]       = 0;
             initSupplies[i]    = 0;
@@ -427,7 +431,7 @@ contract VaultoraPredictionV4 is
         }
 
         // Transfer payment from user
-        IERC20Upgradeable(payToken).safeTransferFrom(msg.sender, address(this), payAmount);
+        IERC20(payToken).transferFrom(msg.sender, address(this), payAmount);
 
         uint256 totalEffPool = _totalEffectivePool(m);
 
@@ -518,7 +522,7 @@ contract VaultoraPredictionV4 is
         }
 
         // Always pay out in USDC
-        IERC20Upgradeable(usdcToken).safeTransfer(msg.sender, netReturn);
+        IERC20(usdcToken).transfer(msg.sender, netReturn);
 
         emit Sold(marketId, msg.sender, grossReturn, tax, netReturn);
     }
@@ -580,7 +584,7 @@ contract VaultoraPredictionV4 is
 
         VaultoraOutcomeToken(m.outcomeTokens[winIdx]).burn(msg.sender, userTokens);
 
-        IERC20Upgradeable(usdcToken).safeTransfer(msg.sender, payout);
+        IERC20(usdcToken).transfer(msg.sender, payout);
 
         emit Claimed(marketId, msg.sender, payout);
     }
@@ -628,7 +632,7 @@ contract VaultoraPredictionV4 is
         require(bond > 0, "V4: zero bond");
 
         // Collect bond from disputer
-        IERC20Upgradeable(usdcToken).safeTransferFrom(msg.sender, address(this), bond);
+        IERC20(usdcToken).transferFrom(msg.sender, address(this), bond);
         disputeBonds[marketId] = bond;
 
         // Revert market to unresolved
@@ -859,7 +863,7 @@ contract VaultoraPredictionV4 is
         require(amount > 0, "V4: zero amount");
         require(accumulatedFees[token] >= amount, "V4: insufficient fees");
         accumulatedFees[token] -= amount;
-        IERC20Upgradeable(token).safeTransfer(owner(), amount);
+        IERC20(token).transfer(owner(), amount);
     }
 
     /// @notice Update buy and sell fees (basis points, max 10% each).
@@ -994,5 +998,13 @@ contract VaultoraPredictionV4 is
     // Reserve 44 storage slots for future versions.
     // Total storage used in V4: ~27 slots above.
     // This leaves room for ~44 more variables before the gap is exhausted.
+    /// @notice Outcome token implementation (EIP-1167 clones master)
+    address public outcomeTokenImpl;
+
+    /// @notice Set the outcome token implementation
+    function setOutcomeTokenImpl(address impl) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        outcomeTokenImpl = impl;
+    }
+
     uint256[44] private __gap;
 }
