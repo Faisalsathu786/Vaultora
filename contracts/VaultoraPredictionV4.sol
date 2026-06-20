@@ -392,33 +392,43 @@ contract VaultoraPredictionV4 is
     ///         User receives tokens of EVERY outcome.
     /// @param marketId  Market to buy into
     /// @param amount    USDC amount to spend (6 decimals)
+    struct BuyParams {
+        uint256 marketId;
+        uint256 outcome;
+        uint256 amount;
+    }
+    
     function buyTokens(
         uint256 marketId,
+        uint256 outcome,
         uint256 amount
     ) external whenNotPaused marketExists(marketId) marketOpen(marketId) {
-        _buyTokens(marketId, amount, usdcToken, amount);
+        _buyTokens(marketId, outcome, amount, usdcToken, amount);
     }
 
     /// @notice Buy outcome tokens with EURC.
     ///         EURC amount is converted to USDC-equivalent via eurcRate.
     function buyTokensWithToken(
         uint256 marketId,
+        uint256 outcome,
         uint256 eurcAmount
     ) external whenNotPaused marketExists(marketId) marketOpen(marketId) {
         require(paymentTokens[eurcToken], "V4: EURC not accepted");
         uint256 usdcEquivalent = eurcAmount * eurcRate / 1e6;
         require(usdcEquivalent > 0, "V4: amount too small");
-        _buyTokens(marketId, usdcEquivalent, eurcToken, eurcAmount);
+        _buyTokens(marketId, outcome, usdcEquivalent, eurcToken, eurcAmount);
     }
 
     function _buyTokens(
         uint256 marketId,
+        uint256 outcome,
         uint256 usdcEquivalent,
         address payToken,
         uint256 payAmount
     ) internal {
         Market storage m = markets[marketId];
         uint256 n = m.options.length;
+        require(outcome < n, "V4:021");
 
         uint256 fee = usdcEquivalent * buyFee / 10000;
         uint256 net = usdcEquivalent - fee;
@@ -436,26 +446,17 @@ contract VaultoraPredictionV4 is
         uint256 totalEffPool = _totalEffectivePool(m);
 
         uint256[] memory tokensReceived = new uint256[](n);
-        for (uint256 i = 0; i < n; i++) {
-            // Split net USDC across outcomes proportionally to their effective pool share
-            uint256 effPool_i = m.pools[i] + VIRTUAL_USDC;
-            uint256 share = (totalEffPool > 0) ? effPool_i * 1e18 / totalEffPool : 1e18 / n;
-            uint256 usdcForPool = net * share / 1e18;
-
-            if (usdcForPool == 0) usdcForPool = 1; // dust guard
-
-            uint256 effSupply_i = m.supplies[i] + VIRTUAL_TOKENS;
-
-            // tokens = usdcForPool (6 dec) * effSupply (18 dec) / effPool (6 dec)  ->  18 dec
-            uint256 tokens = usdcForPool * effSupply_i / effPool_i;
-
-            m.pools[i]                += usdcForPool;
-            m.supplies[i]             += tokens;
-            positionBalances[marketId][i][msg.sender] += tokens;
-
-            VaultoraOutcomeToken(m.outcomeTokens[i]).mint(msg.sender, tokens);
-            tokensReceived[i] = tokens;
-        }
+        
+        // Buy tokens ONLY for the selected outcome
+        uint256 effPool_o = m.pools[outcome] + VIRTUAL_USDC;
+        uint256 effSupply_o = m.supplies[outcome] + VIRTUAL_TOKENS;
+        uint256 tokens = net * effSupply_o / effPool_o;
+        
+        m.pools[outcome] += net;
+        m.supplies[outcome] += tokens;
+        positionBalances[marketId][outcome][msg.sender] += tokens;
+        VaultoraOutcomeToken(m.outcomeTokens[outcome]).mint(msg.sender, tokens);
+        tokensReceived[outcome] = tokens;
 
         _recordInteraction(marketId, msg.sender);
 

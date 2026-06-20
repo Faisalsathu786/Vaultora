@@ -63,26 +63,32 @@ export function useV3PredictionData(wallet, getSigner) {
         const pool = {};
 
         for (let j = 0; j < opts.length; j++) {
-          supply[j] = Number(infos.supplyVals[j] || 0n);
-          pool[j] = Number(infos.poolVals[j] || 0n);
+          const info = infos[j] || {};
+          supply[j] = Number(info.supply || 0n);
+          pool[j] = Number(info.pool || 0n);
         }
 
+        const resolved = m.resolved === true;
+        const disputed = m.disputed === true;
+        const finalized = m.finalized === true;
         results.push({
           id: i,
           question: m.question,
-          image: m.image,
-          category: m.category,
+          image: m.imageUrl || '',
+          category: '',
           options: opts,
           endTime: Number(m.endTime),
-          status: Number(m.status),
-          winningOutcome: Number(m.winningOutcome),
+          status: resolved ? 1 : 0,
+          winningOutcome: Number(m.winningOutcome || 0),
           secsLeft,
-          cancelled: Number(m.status) === 2,
-          resolved: Number(m.status) === 1,
+          cancelled: false,
+          resolved,
+          disputed,
+          finalized,
           supply,
           pool,
           totalPool: Number(totalPoolRaw),
-          tokenIdx: Number(m.tokenIdx),
+          tokenIdx: 0,
         });
       }
       setMarkets(results);
@@ -93,8 +99,10 @@ export function useV3PredictionData(wallet, getSigner) {
         for (let i = 0; i < count; i++) {
           try {
             const result = await c.getUserPosition(i, wallet);
-            const balances = result.balances.map(b => Number(b));
-            const holdings = result.holdings.map(h => Number(h));
+            const balanceArr = result[1] || result.balances || [];
+            const tokenArr = result[0] || result.holdings || [];
+            const balances = Array.isArray(balanceArr) ? balanceArr.map(b => Number(b)) : [];
+            const holdings = Array.isArray(tokenArr) ? tokenArr.map(h => Number(h)) : [];
             if (balances.some(b => b > 0)) {
               pos[i] = { holdings, balances };
             }

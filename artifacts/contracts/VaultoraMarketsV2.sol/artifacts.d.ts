@@ -15,7 +15,7 @@ export interface VaultoraMarketsV2$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/VaultoraMarketsV2.sol";
-  readonly buildInfoId: "solc-0_8_28-8cd4a55a8f8f03669bd71e84b52d0f072f529ae8";
+  readonly buildInfoId: "solc-0_8_28-704be2899bd3b64cdf5427c6b664dd967034d1a6";
 };
 
 import "hardhat/types/artifacts";
