@@ -239,7 +239,12 @@ export function useV3PredictionData(wallet, getSigner) {
       const signer = await getSigner();
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const rawAmt = ethers.parseUnits(String(amt), 18);
-      const tx = await c.sellTokens(marketId, outcome, rawAmt);
+      // V4 sellTokens expects (marketId, amounts[]) - build array with only selected outcome
+      const mkts = markets || [];
+      const m = mkts.find(mk => mk.id === marketId) || {};
+      const n = (m.options || []).length || 3;
+      const amtsArray = Array.from({length:n}, (_,j) => j === outcome ? rawAmt : 0n);
+      const tx = await c.sellTokens(marketId, amtsArray);
       await tx.wait();
       setSellAmt(''); fetchMarkets();
       return true;
@@ -296,7 +301,7 @@ export function useV3PredictionData(wallet, getSigner) {
     (async () => {
       try {
         const c = v3();
-        const owner = await c.owner_is();
+        const owner = await c.owner();
         const isOwnerVal = owner.toLowerCase() === wallet.toLowerCase();
         window.__v3_is_owner = isOwnerVal;
         setIsOwner(isOwnerVal);
