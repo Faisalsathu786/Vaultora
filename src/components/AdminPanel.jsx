@@ -13,7 +13,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [resolvePick, setResolvePick] = useState({});
   const [actionLoading, setActionLoading] = useState(false);
   const [tab, setTab] = useState('markets');
-  const [config, setConfig] = useState({ minBet: '', feeBps: '' });
+  const [config, setConfig] = useState({ buyFee: '', sellFee: '' });
   const [branding, setBranding] = useState({ logo: '', name: '', desc: '' });
   const [newToken, setNewToken] = useState({ addr: '', symbol: '' });
   const [toggleToken, setToggleToken] = useState({ idx: '', enabled: true });
@@ -23,17 +23,19 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   useEffect(() => {
     if (!wallet || !V3_ADDRESS) return;
     const c = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
-    c.owner_is().then(owner => {
+    c.owner().then(owner => {
       setIsOwner(owner.toLowerCase() === wallet.toLowerCase());
     }).catch(e => console.error('Owner check:', e));
     (async () => {
       try {
         const c2 = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
-        const mb = await c2.minBet().catch(() => 0n);
-        const fb = await c2.feeBps().catch(() => 0n);
-        setConfig({ minBet: ethers.formatUnits(mb, 6), feeBps: String(fb) });
-        const br = await c2.getBranding().catch(() => ['','','']);
-        setBranding({ logo: br[0] || '', name: br[1] || '', desc: br[2] || '' });
+        const bf = await c2.buyFee().catch(() => 0n);
+        const sf = await c2.sellFee().catch(() => 0n);
+        setConfig({ buyFee: String(bf), sellFee: String(sf) });
+        const logo = await c2.brandLogo().catch(()=>'');
+        const name = await c2.brandName().catch(()=>'');
+        const desc = await c2.brandDescription().catch(()=>'');
+        setBranding({ logo, name, desc });
       } catch(e) {}
     })();
   }, [wallet]);
@@ -146,14 +148,14 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           <p className="card-lbl">Contract Configuration</p>
           <div className="cm-row" style={{marginTop:8}}>
             <label className="cm-label" style={{width:70}}>Min Bet</label>
-            <input className="num-input" type="number" value={config.minBet} style={{width:100,fontSize:'.65rem'}}
-              onChange={e => setConfig(p=>({...p,minBet:e.target.value}))} />
+            <input className="num-input" type="number" value={config.buyFee} style={{width:100,fontSize:'.65rem'}}
+              onChange={e => setConfig(p=>({...p,buyFee:e.target.value}))} />
             <label className="cm-label" style={{marginLeft:8,width:60}}>Fee BPS</label>
-            <input className="num-input" type="number" value={config.feeBps} style={{width:60,fontSize:'.65rem'}}
-              onChange={e => setConfig(p=>({...p,feeBps:e.target.value}))} />
+            <input className="num-input" type="number" value={config.sellFee} style={{width:60,fontSize:'.65rem'}}
+              onChange={e => setConfig(p=>({...p,sellFee:e.target.value}))} />
             <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px',marginLeft:6}}
               disabled={actionLoading}
-              onClick={() => run('Update Config', c => c.setConfig(ethers.parseUnits(config.minBet||'0',6), Number(config.feeBps)))}>Save</button>
+              onClick={() => run('Update Config', c => c.updateFees(Number(config.buyFee||0), Number(config.sellFee||0)))}>Save</button>
           </div>
 
           <p className="card-lbl" style={{marginTop:16}}>Branding</p>
@@ -209,7 +211,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       {tab === 'fees' && (
         <div className="card">
           <p className="card-lbl">Fees & Ownership</p>
-          <p style={{fontSize:'.65rem',color:'var(--dim)'}}>Current fee: {config.feeBps} bps ({(Number(config.feeBps)/100).toFixed(2)}%)</p>
+          <p style={{fontSize:'.65rem',color:'var(--dim)'}}>Buy fee: {config.buyFee} bps · Sell fee: {config.sellFee} bps</p>
           <div style={{marginTop:8,display:'flex',gap:6,flexDirection:'column'}}>
             <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px',width:180}}
               disabled={actionLoading}
