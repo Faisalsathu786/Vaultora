@@ -89,22 +89,33 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           Resolve a market, then Finalize to enable claims. Dispute if needed.
         </p>
         {(markets||[]).map(m => {
-          const sel = resolvePick[m.id];
+          const rsel = resolvePick[m.id];
           const status = (m.resolved?'R':'')+(m.finalized?'F':'')+(m.disputed?'D':'');
           return (
-            <div key={m.id} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 0',borderBottom:'1px solid #222',fontSize:'.65rem',flexWrap:'wrap'}}>
-              <span style={{background:'#059669',color:'#fff',borderRadius:4,padding:'1px 6px',fontWeight:600,fontSize:'.6rem'}}>#{m.id}</span>
-              <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--clr, #eee)',fontSize:'.65rem'}}>{m.question}</span>
-              {status && <span style={{fontSize:'.55rem',color:'#fbbf24'}}>{status}</span>}
-              <select value={sel||''} onChange={e=>setResolvePick(p=>({...p,[m.id]:Number(e.target.value)}))}
-                style={{fontSize:'.6rem',padding:'2px 4px',background:'#222',color:'#eee',border:'1px solid #444',borderRadius:4}}>
-                <option value="">Pick winner</option>
-                {(m.options||[]).map((o,i)=><option key={i} value={i}>{o}</option>)}
-              </select>
-              <Btn title="Resolve" label="R" cb={c => c.resolveMarket(m.id, sel)} color="#059669" />
-              <Btn title="Finalize" label="F" cb={c => c.finalizeResolve(m.id)} color="#2563eb" />
-              <Btn title="Dispute" label="D" cb={c => c.dispute(m.id)} color="#d97706" />
-              {sel !== undefined && <Btn title="Re-resolve" label="RR" cb={c => c.disputeResolve(m.id, sel)} color="#7c3aed" />}
+            <div key={m.id} style={{padding:'8px 0',borderBottom:'1px solid #222',fontSize:'.65rem'}}>
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                <span style={{background:'#059669',color:'#fff',borderRadius:4,padding:'1px 6px',fontWeight:600,fontSize:'.6rem'}}>#{m.id}</span>
+                <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--clr, #eee)',fontSize:'.65rem'}}>{m.question}</span>
+                {status && <span style={{fontSize:'.55rem',color:'#fbbf24',background:'#222',padding:'1px 6px',borderRadius:4}}>{status}</span>}
+              </div>
+              {m.resolved ? (
+                <div style={{fontSize:'.6rem',color:'#34d399',marginBottom:4}}>Winner: {m.options[m.winningOutcome]}</div>
+              ) : (
+                <div style={{display:'flex',gap:4,flexWrap:'wrap',marginBottom:4}}>
+                  {(m.options||[]).map((o,i) => (
+                    <button key={i} onClick={() => setResolvePick(p=>({...p,[m.id]:i}))}
+                      style={{padding:'4px 10px',fontSize:'.6rem',borderRadius:6,border:'1px solid '+(rsel===i?'#059669':'#444'),background:(rsel===i?'#064e3b':'#222'),color:(rsel===i?'#34d399':'#ccc'),cursor:'pointer'}}>
+                      {o}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:2}}>
+                {!m.resolved && <Btn title="Resolve" label={rsel!==undefined ? 'Resolve as '+m.options[rsel] : 'Select outcome first'} cb={rsel!==undefined ? c => c.resolveMarket(m.id, rsel) : ()=>setMsg('Click an outcome above first')} color={rsel!==undefined?'#059669':'#555'} />}
+                {m.resolved && !m.finalized && <Btn title="Finalize" label="Finalize (enable claims)" cb={c => c.finalizeResolve(m.id)} color="#2563eb" />}
+                {m.resolved && !m.disputed && <Btn title="Dispute" label="Dispute" cb={c => c.dispute(m.id)} color="#d97706" />}
+                {m.resolved && m.disputed && <Btn title="Re-resolve" label="Re-resolve" cb={c => c.disputeResolve(m.id, rsel || m.winningOutcome)} color="#7c3aed" />}
+              </div>
             </div>
           );
         })}
