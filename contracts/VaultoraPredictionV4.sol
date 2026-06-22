@@ -603,7 +603,7 @@ contract VaultoraPredictionV4 is
     ) external onlyMarketCreator marketExists(marketId) {
         Market storage m = markets[marketId];
         require(!m.resolved, "V4: already resolved");
-        require(block.timestamp >= m.endTime, "V4: market still open");
+        require(block.timestamp >= m.endTime || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "V4: market still open");
         require(winningOutcome < m.options.length, "V4: invalid outcome");
 
         m.resolved        = true;
