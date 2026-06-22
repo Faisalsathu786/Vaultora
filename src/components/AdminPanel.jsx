@@ -50,8 +50,8 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         } catch(e) {}
         
         const [usdcFees, eurcFees] = await Promise.all([
-          c2.accumulatedFees("0x3600000000000000000000000000000000000000").catch(()=>0n),
-          c2.accumulatedFees("0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a").catch(()=>0n),
+          c.accumulatedFees("0x3600000000000000000000000000000000000000").catch(()=>0n),
+          c.accumulatedFees("0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a").catch(()=>0n),
         ]);
         setAccFees({ usdc: ethers.formatUnits(usdcFees, 6), eurc: ethers.formatUnits(eurcFees, 6) });
       } catch(e) {}
