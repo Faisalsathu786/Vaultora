@@ -22,18 +22,18 @@
     "pg": "^8.21.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "solc": "0.8.28"
+    "solc": "0.8.28",
+    "vite": "^8.0.16",
+    "@vitejs/plugin-react": "^6.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.5.0",
-    "vite": "^8.0.16"
+    "globals": "^17.5.0"
   },
   "description": "Vaultora is a DeFi platform combining two core products under one dashboard: a savings vault for earning yield on stablecoins, and a prediction market for betting on real-world events.",
   "main": "eslint.config.js",
