@@ -320,7 +320,7 @@ export default function Predict({
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}>
             {m.image && (
               <div className="mkt-img-wrap">
-                <img src={m.image} alt="" className="mkt-img" style={{width:'var(--mkt-img-w)',height:'var(--mkt-img-h)',objectFit:'cover'}}
+                <img src={m.image} alt="" className="mkt-img" style={{width:'var(--mkt-img-w)',height:'var(--mkt-img-h)',objectFit:'contain'}}
                   onError={e => e.target.parentElement.style.display = 'none'} />
               </div>
             )}
