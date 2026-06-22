@@ -241,7 +241,7 @@ export default function Predict({
                 ) : list.map(e => {
                   const m = e.market; const p = e.pos;
                   const opts = m.options || [];
-                  const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
+                  const tokSym = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1__') ? 'EURC' : 'USDC';
                   const isSettled = portTab === 'settled';
                   const mId = m.id;
                   return (
@@ -300,8 +300,11 @@ export default function Predict({
                                   onClick={e=>{e.stopPropagation();setSellSel(`${m.id}_${oi}`);setSellAmt(balDisplay);}}>Sell</button>
                               )}
                               {isWinner && (
-                                <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                  onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim</button>
+                                <div style={{display:'flex',gap:4,flexDirection:'column'}}>
+                                  <div style={{fontSize:'.6rem',color:'#34d399',fontWeight:600}}>Won: ${pv.value.toFixed(2)}</div>
+                                  <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
+                                    onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim ${pv.value.toFixed(2)}</button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -327,7 +330,7 @@ export default function Predict({
         const resolved = m.resolved;
         const cancelled = m.cancelled;
         const endedAt = resolved || cancelled || m.secsLeft <= 0;
-        const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
+        const tokSym = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1__') ? 'EURC' : 'USDC';
 
         return (
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}
