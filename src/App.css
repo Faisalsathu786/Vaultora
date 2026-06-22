@@ -225,19 +225,17 @@ body {
   .mkt-img-wrap {
     margin: 0;
     width: 100%;
-    height: auto;
-    max-height: 220px;
     border-radius: 0;
     overflow: hidden;
     background: var(--surf2);
-    aspect-ratio: 16/7;
   }
   .mkt-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center 30%;
     display: block;
+    width: 100%;
+    height: auto;
+    max-height: 280px;
+    object-fit: contain;
+    object-position: center;
     transition: transform .3s ease;
   }
   .mkt-card:hover .mkt-img { transform: scale(1.02); }
@@ -1659,17 +1657,16 @@ body {
   overflow: hidden;
   margin: 0 0 12px 0;
   width: 100%;
-  height: auto;
-  aspect-ratio: 16/8;
   background: var(--surf2);
   position: relative;
 }
 .mkt-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center 30%;
   display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
+  object-position: center;
 }
 
 .cm-optional {
@@ -3070,7 +3067,6 @@ body {
   box-shadow: 0 8px 24px rgba(0,0,0,.15);
 }
 .mkt-img-wrap {
-  aspect-ratio: 16/9;
   transition: opacity .3s;
 }
 .mkt-img {
