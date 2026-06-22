@@ -3,196 +3,209 @@ import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
 
 const RPC = 'https://rpc.testnet.arc.network';
-function getProvider() {
-  if (window.ethereum) return new ethers.BrowserProvider(window.ethereum);
-  return new ethers.JsonRpcProvider(RPC);
-}
+function getProvider() { return window.ethereum ? new ethers.BrowserProvider(window.ethereum) : new ethers.JsonRpcProvider(RPC); }
 
 export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMarkets }) {
   const [isOwner, setIsOwner] = useState(false);
-  const [resolvePick, setResolvePick] = useState({});
-  const [actionLoading, setActionLoading] = useState(false);
   const [tab, setTab] = useState('markets');
-  const [config, setConfig] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
-  const [configShow, setConfigShow] = useState(false);
-  const [branding, setBranding] = useState({ logo: '', name: '', desc: '' });
-  const [eurcRate, setEurcRate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [resolvePick, setResolvePick] = useState({});
   const [extendMkt, setExtendMkt] = useState({ id: '', days: '' });
   const [setImg, setSetImg] = useState({ id: '', url: '' });
+  const [cfg, setCfg] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
+  const [brand, setBrand] = useState({ logo: '', name: '', desc: '' });
+  const [eurcRate, setEurcRate] = useState('');
   const [withdrawAddr, setWithdrawAddr] = useState('');
   const [withdrawAmt, setWithdrawAmt] = useState('');
 
   useEffect(() => {
     if (!wallet || !V3_ADDRESS) return;
-    const c = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
-    c.owner().then(owner => {
-      setIsOwner(owner.toLowerCase() === wallet.toLowerCase());
-    }).catch(e => console.error('Owner check:', e));
     (async () => {
       try {
-        const c2 = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
-        const bf = await c2.buyFee().catch(() => 0n);
-        const sf = await c2.sellFee().catch(() => 0n);
-        setConfig(p => ({ ...p, buyFee: String(bf), sellFee: String(sf) }));
-        const db = await c2.disputeBondBps().catch(() => 0n);
-        const dw = await c2.disputeWindowDuration().catch(() => 0n);
-        const minD = await c2.minMarketDuration().catch(() => 0n);
-        const maxD = await c2.maxMarketDuration().catch(() => 0n);
-        setConfig(p => ({ ...p, disputeBond: String(db), disputeWindow: String(dw), minDur: String(minD), maxDur: String(maxD) }));
-        const logo = await c2.brandLogo().catch(() => '');
-        const name = await c2.brandName().catch(() => '');
-        const desc = await c2.brandDescription().catch(() => '');
-        setBranding({ logo, name, desc });
-        const er = await c2.eurcRate().catch(() => 0n);
+        const c = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
+        const owner = await c.owner();
+        setIsOwner(owner.toLowerCase() === wallet.toLowerCase());
+        
+        const [bf, sf, db, dw, minD, maxD] = await Promise.all([
+          c.buyFee().catch(()=>0n), c.sellFee().catch(()=>0n),
+          c.disputeBondBps().catch(()=>0n), c.disputeWindowDuration().catch(()=>0n),
+          c.minMarketDuration().catch(()=>0n), c.maxMarketDuration().catch(()=>0n),
+        ]);
+        setCfg({ buyFee: String(bf), sellFee: String(sf), disputeBond: String(db), disputeWindow: String(dw), minDur: String(minD), maxDur: String(maxD) });
+        
+        const [logo, name, desc, er] = await Promise.all([
+          c.brandLogo().catch(()=>''), c.brandName().catch(()=>''),
+          c.brandDescription().catch(()=>''), c.eurcRate().catch(()=>0n),
+        ]);
+        setBrand({ logo, name, desc });
         setEurcRate(ethers.formatUnits(er, 18));
       } catch(e) {}
     })();
   }, [wallet]);
 
-  const run = (title, cb) => {
-    setActionLoading(true);
-    (async () => {
-      try {
-        const signer = await getSigner();
-        const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
-        await cb(c);
-        notify(title + ' done', 'success');
-        if (typeof fetchMarkets === 'function') fetchMarkets();
-      } catch(e) { notify(title + ': ' + (e.reason || e.message), 'error'); }
-      setActionLoading(false);
-    })();
+  const act = async (title, cb) => {
+    setLoading(true); setMsg('');
+    try {
+      const signer = await getSigner();
+      await cb(new ethers.Contract(V3_ADDRESS, V3_ABI, signer));
+      setMsg(title + ' done');
+      if (typeof fetchMarkets === 'function') fetchMarkets();
+    } catch(e) { setMsg(title + ' failed: ' + (e.reason || e.message).slice(0, 80)); }
+    setLoading(false);
   };
 
-  const btn = (title, label, cb) => (
-    <button disabled={actionLoading} style={{fontSize:'.65rem',padding:'3px 8px',margin:2}}
-      onClick={() => run(title, cb)}>{label}</button>
+  const Btn = ({title, label, cb, color, big}) => (
+    <button className={big ? "btn-primary" : "cm-toggle"}
+      style={{fontSize:big?'.7rem':'.6rem',padding:big?'6px 16px':'3px 8px',margin:2, background:color||''}}
+      disabled={loading} onClick={() => act(title, cb)}>{label || title}</button>
   );
 
-  if (!isOwner) return (
-    <div className="card"><p className="empty">Admin access required - connect owner wallet</p></div>
-  );
+  if (!isOwner) return <div className="card"><p style={{textAlign:'center',color:'#888',fontSize:'.8rem'}}>Connect owner wallet to access admin panel</p></div>;
 
   return (
     <div className="card">
-      <p className="card-lbl">Admin Panel</p>
-      <div style={{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}}>
-        <button className={"cm-toggle " + (tab==='markets'?'active':'')} onClick={()=>setTab('markets')}>Markets</button>
-        <button className={"cm-toggle " + (tab==='config'?'active':'')} onClick={()=>setTab('config')}>Config</button>
-        <button className={"cm-toggle " + (tab==='branding'?'active':'')} onClick={()=>setTab('branding')}>Branding</button>
+
+      {/* Tab bar */}
+      <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',borderBottom:'1px solid #333',paddingBottom:8}}>
+        {['markets','config','branding'].map(t => (
+          <button key={t} className="btn-primary" style={{padding:'4px 14px',fontSize:'.7rem',opacity:tab===t?1:.5}}
+            onClick={()=>setTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+        ))}
+        <span style={{flex:1}} />
+        {loading && <span style={{fontSize:'.6rem',color:'#888'}}>Processing...</span>}
+        {msg && <span style={{fontSize:'.6rem',color:'#34d399'}}>{msg}</span>}
       </div>
 
-      {tab === 'markets' && (
-        <div>
-          {(markets||[]).map(m => {
-            const sel = resolvePick[m.id];
-            return (
-              <div key={m.id} className="cm-row" style={{flexWrap:'wrap',marginBottom:4,fontSize:'.65rem'}}>
-                <span style={{minWidth:30}}>#{m.id}</span>
-                <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.question}</span>
-                <span style={{color:'var(--dim)',padding:'0 4px'}}>
-                  {m.resolved?'R ':''}{m.finalized?'F ':''}{m.disputed?'D ':''}
-                </span>
-                <select value={sel||''} onChange={e=>setResolvePick(p=>({...p,[m.id]:Number(e.target.value)}))}>
-                  <option value="">-</option>
-                  {(m.options||[]).map((o,i)=><option key={i} value={i}>{o}</option>)}
-                </select>
-                {btn('Resolve','Resolve', c => c.resolveMarket(m.id, sel))}
-                {btn('Finalize','Finalize', c => c.finalizeResolve(m.id))}
-                {btn('Dispute','Dispute', c => c.dispute(m.id))}
-                {btn('Re-resolve','Re-resolve', c => c.disputeResolve(m.id, sel))}
-              </div>
-            );
-          })}
+      {/* === MARKETS TAB === */}
+      {tab === 'markets' && <>
+        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>
+          Resolve a market, then Finalize to enable claims. Dispute if needed.
+        </p>
+        {(markets||[]).map(m => {
+          const sel = resolvePick[m.id];
+          const status = (m.resolved?'R':'')+(m.finalized?'F':'')+(m.disputed?'D':'');
+          return (
+            <div key={m.id} style={{display:'flex',alignItems:'center',gap:6,padding:'5px 0',borderBottom:'1px solid #222',fontSize:'.65rem',flexWrap:'wrap'}}>
+              <span style={{background:'#059669',color:'#fff',borderRadius:4,padding:'1px 6px',fontWeight:600,fontSize:'.6rem'}}>#{m.id}</span>
+              <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'var(--clr, #eee)',fontSize:'.65rem'}}>{m.question}</span>
+              {status && <span style={{fontSize:'.55rem',color:'#fbbf24'}}>{status}</span>}
+              <select value={sel||''} onChange={e=>setResolvePick(p=>({...p,[m.id]:Number(e.target.value)}))}
+                style={{fontSize:'.6rem',padding:'2px 4px',background:'#222',color:'#eee',border:'1px solid #444',borderRadius:4}}>
+                <option value="">Pick winner</option>
+                {(m.options||[]).map((o,i)=><option key={i} value={i}>{o}</option>)}
+              </select>
+              <Btn title="Resolve" label="R" cb={c => c.resolveMarket(m.id, sel)} color="#059669" />
+              <Btn title="Finalize" label="F" cb={c => c.finalizeResolve(m.id)} color="#2563eb" />
+              <Btn title="Dispute" label="D" cb={c => c.dispute(m.id)} color="#d97706" />
+              {sel !== undefined && <Btn title="Re-resolve" label="RR" cb={c => c.disputeResolve(m.id, sel)} color="#7c3aed" />}
+            </div>
+          );
+        })}
 
-          <p className="cm-label" style={{marginTop:8}}>Extend Deadline</p>
-          <div className="cm-row" style={{flexWrap:'wrap'}}>
-            <input className="num-input" style={{width:50}} type="number" placeholder="ID" value={extendMkt.id}
-              onChange={e=>setExtendMkt(p=>({...p,id:e.target.value}))} />
-            <input className="num-input" style={{width:60}} type="number" placeholder="days" value={extendMkt.days}
-              onChange={e=>setExtendMkt(p=>({...p,days:e.target.value}))} />
-            {btn('Extend','Save', c => c.extendMarket(Number(extendMkt.id), Math.floor(Date.now()/1000)+Number(extendMkt.days)*86400))}
-          </div>
+        <p style={{fontSize:'.7rem',color:'#999',marginTop:12,marginBottom:4}}>Extend deadline</p>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <input placeholder="ID" value={extendMkt.id} onChange={e=>setExtendMkt(p=>({...p,id:e.target.value}))}
+            style={{width:50,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <input placeholder="Days" value={extendMkt.days} onChange={e=>setExtendMkt(p=>({...p,days:e.target.value}))}
+            style={{width:60,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <Btn title="Extend" label="Save" cb={c => c.extendMarket(Number(extendMkt.id), Math.floor(Date.now()/1000)+Number(extendMkt.days)*86400)} />
+        </div>
 
-          <p className="cm-label" style={{marginTop:8}}>Set Image</p>
-          <div className="cm-row" style={{flexWrap:'wrap'}}>
-            <input className="num-input" style={{width:40}} type="number" placeholder="ID" value={setImg.id}
-              onChange={e=>setSetImg(p=>({...p,id:e.target.value}))} />
-            <input style={{flex:1,minWidth:120}} type="text" placeholder="URL" value={setImg.url}
-              onChange={e=>setSetImg(p=>({...p,url:e.target.value}))} />
-            {btn('Image','Save', c => c.setMarketImage(Number(setImg.id), setImg.url))}
-          </div>
+        <p style={{fontSize:'.7rem',color:'#999',marginTop:12,marginBottom:4}}>Market image</p>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <input placeholder="ID" value={setImg.id} onChange={e=>setSetImg(p=>({...p,id:e.target.value}))}
+            style={{width:50,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <input placeholder="URL" value={setImg.url} onChange={e=>setSetImg(p=>({...p,url:e.target.value}))}
+            style={{flex:1,minWidth:120,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <Btn title="Set Image" label="Save" cb={c => c.setMarketImage(Number(setImg.id), setImg.url)} />
+        </div>
 
-          <p className="cm-label" style={{marginTop:8}}>Withdraw Fees</p>
-          <div className="cm-row" style={{flexWrap:'wrap'}}>
-            <input style={{flex:1,minWidth:120}} type="text" placeholder="token addr (default USDC)" value={withdrawAddr}
-              onChange={e=>setWithdrawAddr(e.target.value)} />
-            <input className="num-input" style={{width:80}} type="text" placeholder="amount" value={withdrawAmt}
-              onChange={e=>setWithdrawAmt(e.target.value)} />
-            {btn('Withdraw','Withdraw', c => c.withdrawTokens(
-              withdrawAddr||'0x3600000000000000000000000000000000000000',
-              ethers.parseUnits(withdrawAmt||'0',6)
-            ))}
+        <p style={{fontSize:'.7rem',color:'#999',marginTop:12,marginBottom:4}}>Withdraw accumulated fees</p>
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <input placeholder="Token addr (empty=USDC)" value={withdrawAddr} onChange={e=>setWithdrawAddr(e.target.value)}
+            style={{flex:1,minWidth:120,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <input placeholder="Amount (6dec)" value={withdrawAmt} onChange={e=>setWithdrawAmt(e.target.value)}
+            style={{width:100,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          <Btn title="Withdraw" label="Withdraw" cb={c => c.withdrawTokens(withdrawAddr||'0x3600000000000000000000000000000000000000', ethers.parseUnits(withdrawAmt||'0',6))} />
+        </div>
+      </>}
+
+      {/* === CONFIG TAB === */}
+      {tab === 'config' && <>
+        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>
+          Fees are in basis points (100 bps = 1%). Dispute window set to 0 means instant finalize.
+        </p>
+
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
+          <p style={{fontSize:.7,color:'#60a5fa',marginBottom:4}}>Trading Fees</p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+            <label style={{fontSize:'.6rem',color:'#999'}}>Buy Fee (bps):</label>
+            <input value={cfg.buyFee} onChange={e=>setCfg(p=>({...p,buyFee:e.target.value}))}
+              style={{width:60,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <label style={{fontSize:'.6rem',color:'#999'}}>Sell Fee (bps):</label>
+            <input value={cfg.sellFee} onChange={e=>setCfg(p=>({...p,sellFee:e.target.value}))}
+              style={{width:60,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <Btn title="Fees" label="Update Fees" cb={c => c.updateFees(Number(cfg.buyFee||0), Number(cfg.sellFee||0))} big />
           </div>
         </div>
-      )}
 
-      {tab === 'config' && (
-        <div>
-          <p className="cm-label">Fees (bps, 100 = 1%)</p>
-          <div className="cm-row" style={{flexWrap:'wrap',gap:6}}>
-            <span>Buy:</span>
-            <input className="num-input" style={{width:60}} type="number" value={config.buyFee}
-              onChange={e=>setConfig(p=>({...p,buyFee:e.target.value}))} />
-            <span>Sell:</span>
-            <input className="num-input" style={{width:60}} type="number" value={config.sellFee}
-              onChange={e=>setConfig(p=>({...p,sellFee:e.target.value}))} />
-            {btn('Fees','Save', c => c.updateFees(Number(config.buyFee||0), Number(config.sellFee||0)))}
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
+          <p style={{fontSize:.7,color:'#60a5fa',marginBottom:4}}>Dispute & Duration</p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+            <label style={{fontSize:'.6rem',color:'#999'}}>Bond (bps):</label>
+            <input value={cfg.disputeBond} onChange={e=>setCfg(p=>({...p,disputeBond:e.target.value}))}
+              style={{width:50,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <label style={{fontSize:'.6rem',color:'#999'}}>Window (sec):</label>
+            <input value={cfg.disputeWindow} onChange={e=>setCfg(p=>({...p,disputeWindow:e.target.value}))}
+              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <label style={{fontSize:'.6rem',color:'#999'}}>Min (sec):</label>
+            <input value={cfg.minDur} onChange={e=>setCfg(p=>({...p,minDur:e.target.value}))}
+              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <label style={{fontSize:'.6rem',color:'#999'}}>Max (sec):</label>
+            <input value={cfg.maxDur} onChange={e=>setCfg(p=>({...p,maxDur:e.target.value}))}
+              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
           </div>
-
-          <p className="cm-label" style={{marginTop:8}}>Dispute & Duration (set window=0 for no waiting)</p>
-          <div className="cm-row" style={{flexWrap:'wrap',gap:4}}>
-            <span>Bond(bps):</span>
-            <input className="num-input" style={{width:50}} type="number" value={config.disputeBond}
-              onChange={e=>setConfig(p=>({...p,disputeBond:e.target.value}))} />
-            <span>Window(s):</span>
-            <input className="num-input" style={{width:70}} type="number" value={config.disputeWindow}
-              onChange={e=>setConfig(p=>({...p,disputeWindow:e.target.value}))} />
-            <span>Min(s):</span>
-            <input className="num-input" style={{width:70}} type="number" value={config.minDur}
-              onChange={e=>setConfig(p=>({...p,minDur:e.target.value}))} />
-            <span>Max(s):</span>
-            <input className="num-input" style={{width:70}} type="number" value={config.maxDur}
-              onChange={e=>setConfig(p=>({...p,maxDur:e.target.value}))} />
-          </div>
-          {btn('Config','Save All', c => c.updateConfig(
-            Number(config.disputeBond||0), Number(config.disputeWindow||0),
-            Number(config.minDur||0), Number(config.maxDur||0)
-          ))}
-
-          <p className="cm-label" style={{marginTop:8}}>EURC Rate</p>
-          <div className="cm-row" style={{flexWrap:'wrap',gap:6}}>
-            <input className="num-input" style={{width:100}} type="text" value={eurcRate}
-              onChange={e=>setEurcRate(e.target.value)} />
-            <span>1 EURC = ? USDC</span>
-            {btn('EURC Rate','Set', c => c.setEurcRate(ethers.parseUnits(eurcRate||'1',18)))}
+          <div style={{marginTop:6}}>
+            <Btn title="Config" label="Save All" cb={c => c.updateConfig(Number(cfg.disputeBond||0), Number(cfg.disputeWindow||0), Number(cfg.minDur||0), Number(cfg.maxDur||0))} big />
           </div>
         </div>
-      )}
 
-      {tab === 'branding' && (
-        <div>
-          <p className="cm-label">Brand Logo URL</p>
-          <input type="text" value={branding.logo}
-            onChange={e => setBranding(p=>({...p,logo:e.target.value}))} />
-          <p className="cm-label">Name</p>
-          <input type="text" value={branding.name}
-            onChange={e => setBranding(p=>({...p,name:e.target.value}))} />
-          <p className="cm-label">Description</p>
-          <input type="text" value={branding.desc}
-            onChange={e => setBranding(p=>({...p,desc:e.target.value}))} />
-          <div style={{marginTop:6}}>{btn('Branding','Save All', c => c.setBranding(branding.logo, branding.name, branding.desc))}</div>
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8}}>
+          <p style={{fontSize:.7,color:'#60a5fa',marginBottom:4}}>EURC Exchange Rate</p>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <span style={{fontSize:'.6rem',color:'#999'}}>1 EURC =</span>
+            <input value={eurcRate} onChange={e=>setEurcRate(e.target.value)}
+              style={{width:100,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee'}} />
+            <span style={{fontSize:'.6rem',color:'#999'}}>USDC</span>
+            <Btn title="EURC" label="Update Rate" cb={c => c.setEurcRate(ethers.parseUnits(eurcRate||'1',18))} big />
+          </div>
         </div>
-      )}
+      </>}
+
+      {/* === BRANDING TAB === */}
+      {tab === 'branding' && <>
+        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize the site branding</p>
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <div>
+            <label style={{fontSize:'.6rem',color:'#999',display:'block',marginBottom:2}}>Logo URL</label>
+            <input value={brand.logo} onChange={e=>setBrand(p=>({...p,logo:e.target.value}))}
+              style={{width:'100%',padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          </div>
+          <div>
+            <label style={{fontSize:'.6rem',color:'#999',display:'block',marginBottom:2}}>Brand Name</label>
+            <input value={brand.name} onChange={e=>setBrand(p=>({...p,name:e.target.value}))}
+              style={{width:'100%',padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          </div>
+          <div>
+            <label style={{fontSize:'.6rem',color:'#999',display:'block',marginBottom:2}}>Description</label>
+            <input value={brand.desc} onChange={e=>setBrand(p=>({...p,desc:e.target.value}))}
+              style={{width:'100%',padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+          </div>
+          <Btn title="Branding" label="Save All" cb={c => c.setBranding(brand.logo, brand.name, brand.desc)} big />
+        </div>
+      </>}
+
     </div>
   );
 }
