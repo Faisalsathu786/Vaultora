@@ -11,5 +11,38 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <script>
+// Fetch site design from V5 contract and apply
+(async function() {
+try {
+  const RPC = "https://rpc.testnet.arc.network";
+  const ADDR = "0xfc3E223210Ac97bE51BD75E3C414A5b6F21FeeE2";
+  const ABI = ["function brandDescription() view returns (string)"];
+  const r = await fetch(RPC, {
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_call",
+      params:[{to:ADDR,data:"0x95d89b41" /* brandDescription selector */},"latest"]})
+  });
+  const j = await r.json();
+  if (j.result) {
+    const txt = atob(j.result.slice(2).match(/.{1,2}/g).map(c=>String.fromCharCode(parseInt(c,16))).join("")).replace(/[^ -~]/g,"");
+    if (txt.startsWith("{")) {
+      const d = JSON.parse(txt);
+      const root = document.querySelector(":root") || document.documentElement;
+      const style = document.createElement("style");
+      let css = "";
+      if (d.bg) css += "body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;z-index:-1;opacity:.4;background:url("+d.bg+") center/cover no-repeat}";
+      if (d.primary) css += ":root{--clr:"+d.primary+"}";
+      if (d.cardBg) css += ":root{--card-bg:"+d.cardBg+"}";
+      if (d.accent) css += ":root{--accent:"+d.accent+"}";
+      if (d.theme === "light") css += ":root{--bg:#fff;--fg:#000}";
+      if (d.mktImgW) css += ".mkt-img{width:"+d.mktImgW+"px}";
+      if (d.mktImgH) css += ".mkt-img{height:"+d.mktImgH+"px}";
+      if (css) { style.textContent = css; document.head.appendChild(style); }
+    }
+  }
+} catch(e) { console.log("Site design load:", e.message); }
+})();
+</script>
+
 </html>
