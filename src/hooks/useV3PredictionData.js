@@ -267,9 +267,12 @@ export function useV3PredictionData(wallet, getSigner) {
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
       const imgUrl = newMkt.imageUrl?.trim() || '';
+      const tok = newMkt.token || 0;
+      // Store token info in imageUrl using prefix convention
+      const storage = tok === 1 ? (imgUrl ? `__img1__${imgUrl}` : '__tok1__') : (imgUrl || '');
       window.__cm = 3;
       let tx;
-      if (imgUrl) tx = await c.createMarketWithImage(newMkt.question, opts, endTime, imgUrl);
+      if (storage) tx = await c.createMarketWithImage(newMkt.question, opts, endTime, storage);
       else tx = await c.createMarket(newMkt.question, opts, endTime);
       window.__cm = 4;
       await tx.wait();
