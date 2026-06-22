@@ -283,7 +283,7 @@ export default function Predict({
                               }
                             }}>
                             <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'var(--clr, #34d399)':isSelected?'var(--clr, #00c9a7)':'var(--clr, #ccc)'}}>{opt} {isWinner?'✓':''}</span>
+                              <span style={{fontWeight:600,fontSize:'.78rem',color:isWinner?'var(--clr, #34d399)':isSelected?'var(--clr, #00c9a7)':'var(--clr, #ccc)'}}>{opt} {isWinner?'✓ Won':(isSettled&&m.resolved?'✕ Lost':'')}</span>
                               <span style={{fontSize:'.7rem',color:'#888'}}>{balDisplay} tkn</span>
                             </div>
                             {!isSettled && (
