@@ -229,40 +229,48 @@ else activePos.push(entry);
               {portTab === 'history' ? (() => {
                 const trades = supabaseData?.trades || [];
                 const claims = JSON.parse(localStorage.getItem('vt_claims')||'[]');
-                return trades.length === 0 && claims.length === 0 ? (
-                  <p className="empty">No trade history</p>
-                ) : (
-                  <div className="lb-table-wrap" style={{maxHeight:400,overflow:'auto'}}>
-                    <table className="lb-table">
-                      <thead><tr><th>Market</th><th>Action</th><th>Amount</th><th>Time</th></tr></thead>
-                      <tbody>
-                        {trades.slice(0, 30).map((tx, i) => (
-                          <tr key={i}>
-                            <td style={{fontSize:'.65rem',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{tx.market_id}</td>
-                            <td style={{fontSize:'.65rem',color:tx.action==='buy'?'#34d399':'#f87171'}}>{tx.action}</td>
-                            <td style={{fontSize:'.65rem'}}>{Number(tx.amount||0).toFixed(2)}</td>
-                            <td style={{fontSize:'.65rem',color:'#888'}}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>)}
-                  {claims.length > 0 && (
-                    <div style={{marginTop:12}}>
-                      <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:6}}>Claim History</p>
-                      {claims.slice().reverse().map((c,i) => (
-                        <div key={i} className="port-row" style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
-                          <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:'.7rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{c.mId} {c.q}</div>
-                            <div style={{fontSize:.6,color:'#888'}}>{c.o} · {new Date(c.t).toLocaleDateString()}</div>
+                const noData = trades.length === 0 && claims.length === 0;
+                return (
+                  <div>
+                    {noData ? (
+                      <p className="empty">No trade history</p>
+                    ) : (
+                      <div>
+                        {trades.length > 0 && (
+                          <div className="lb-table-wrap" style={{maxHeight:400,overflow:'auto'}}>
+                            <table className="lb-table">
+                              <thead><tr><th>Market</th><th>Action</th><th>Amount</th><th>Time</th></tr></thead>
+                              <tbody>
+                                {trades.slice(0, 30).map((tx, i) => (
+                                  <tr key={i}>
+                                    <td style={{fontSize:'.65rem',maxWidth:150,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{tx.market_id}</td>
+                                    <td style={{fontSize:'.65rem',color:tx.action==='buy'?'#34d399':'#f87171'}}>{tx.action}</td>
+                                    <td style={{fontSize:'.65rem'}}>{Number(tx.amount||0).toFixed(2)}</td>
+                                    <td style={{fontSize:'.65rem',color:'#888'}}>{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <div style={{fontSize:'.75rem',color:'#34d399',fontWeight:600,whiteSpace:'nowrap',marginLeft:8}}>+${c.amt}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
+                        )}
+                        {claims.length > 0 && (
+                          <div style={{marginTop:12}}>
+                            <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:6}}>Claim History</p>
+                            {claims.slice().reverse().map((c,i) => (
+                              <div key={i} className="port-row" style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:'.7rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{c.mId} {c.q}</div>
+                                  <div style={{fontSize:.6,color:'#888'}}>{c.o} · {new Date(c.t).toLocaleDateString()}</div>
+                                </div>
+                                <div style={{fontSize:'.75rem',color:'#34d399',fontWeight:600,whiteSpace:'nowrap',marginLeft:8}}>+${c.amt}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
               })() : (
                 list.length === 0 ? (
                   <p className="empty">No {portTab} positions</p>
