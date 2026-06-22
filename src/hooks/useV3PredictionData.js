@@ -252,7 +252,7 @@ export function useV3PredictionData(wallet, getSigner) {
   };
 
   const createMarket = async () => {
-    if (!newMkt.question.trim() || !V3_ADDRESS) return;
+    if (!newMkt.question.trim() || !V3_ADDRESS) { setCreating(false); return false; }
     setCreating(true);
     try {
       const signer = await getSigner();
@@ -271,7 +271,7 @@ export function useV3PredictionData(wallet, getSigner) {
       setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
       setShowCreateForm(false); fetchMarkets();
       return true;
-    } catch (e) { console.error('Create error:', e); return false; }
+    } catch (e) { console.error('Create error:', e); setMsg(e.reason || e.shortMessage || e.message); setCreating(false); return false; }
     finally { setCreating(false); }
   };
 
