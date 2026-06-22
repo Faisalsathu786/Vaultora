@@ -16,8 +16,8 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [cfg, setCfg] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
   const [brand, setBrand] = useState({ logo: '', name: '', desc: '' });
   const [eurcRate, setEurcRate] = useState('');
-  const [withdrawAddr, setWithdrawAddr] = useState('');
-  const [withdrawAmt, setWithdrawAmt] = useState('');
+  const [accFees, setAccFees] = useState({ usdc: '0', eurc: '0' });
+
 
   useEffect(() => {
     if (!wallet || !V3_ADDRESS) return;
@@ -40,6 +40,12 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         ]);
         setBrand({ logo, name, desc });
         setEurcRate(ethers.formatUnits(er, 18));
+        
+        const [usdcFees, eurcFees] = await Promise.all([
+          c2.accumulatedFees("0x3600000000000000000000000000000000000000").catch(()=>0n),
+          c2.accumulatedFees("0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a").catch(()=>0n),
+        ]);
+        setAccFees({ usdc: ethers.formatUnits(usdcFees, 6), eurc: ethers.formatUnits(eurcFees, 6) });
       } catch(e) {}
     })();
   }, [wallet]);
@@ -121,13 +127,24 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           <Btn title="Set Image" label="Save" cb={c => c.setMarketImage(Number(setImg.id), setImg.url)} />
         </div>
 
-        <p style={{fontSize:'.7rem',color:'#999',marginTop:12,marginBottom:4}}>Withdraw accumulated fees</p>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
-          <input placeholder="Token addr (empty=USDC)" value={withdrawAddr} onChange={e=>setWithdrawAddr(e.target.value)}
-            style={{flex:1,minWidth:120,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-          <input placeholder="Amount (6dec)" value={withdrawAmt} onChange={e=>setWithdrawAmt(e.target.value)}
-            style={{width:100,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-          <Btn title="Withdraw" label="Withdraw" cb={c => c.withdrawTokens(withdrawAddr||'0x3600000000000000000000000000000000000000', ethers.parseUnits(withdrawAmt||'0',6))} />
+        <div style={{background:'#1a1a2e',padding:12,borderRadius:8,marginTop:12}}>
+          <p style={{fontSize:'.65rem',color:'#fbbf24',marginBottom:6}}>Accumulated Fees</p>
+          <div style={{display:'flex',gap:16,marginBottom:8}}>
+            <div style={{flex:1,background:'#222',padding:'6px 10px',borderRadius:6}}>
+              <span style={{fontSize:'.55rem',color:'#999'}}>USDC Fees</span>
+              <div style={{fontSize:'.8rem',color:'#34d399',fontWeight:600}}>{Number(accFees.usdc).toFixed(2)} USDC</div>
+            </div>
+            <div style={{flex:1,background:'#222',padding:'6px 10px',borderRadius:6}}>
+              <span style={{fontSize:'.55rem',color:'#999'}}>EURC Fees</span>
+              <div style={{fontSize:'.8rem',color:'#34d399',fontWeight:600}}>{Number(accFees.eurc).toFixed(2)} EURC</div>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <Btn title="Withdraw USDC" label="Withdraw USDC" big
+              cb={c => c.withdrawTokens("0x3600000000000000000000000000000000000000", ethers.parseUnits(accFees.usdc||'0',6))} />
+            <Btn title="Withdraw EURC" label="Withdraw EURC" big
+              cb={c => c.withdrawTokens("0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a", ethers.parseUnits(accFees.eurc||'0',6))} />
+          </div>
         </div>
       </>}
 
