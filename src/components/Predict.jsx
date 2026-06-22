@@ -137,6 +137,13 @@ export default function Predict({
             <input className="num-input" type="number" value={newMkt.days} style={{ width: 80 }}
               onChange={e => setNewMkt(p => ({ ...p, days: e.target.value }))} />
           </div>
+          <div className="cm-row" style={{ marginTop: 8 }}>
+            <label className="cm-label">Token</label>
+            <button className={"cm-toggle " + (newMkt.token === 0 ? "active" : "")}
+              style={{fontSize:'.65rem'}} onClick={() => setNewMkt(p => ({...p, token: 0}))}>USDC</button>
+            <button className={"cm-toggle " + (newMkt.token === 1 ? "active" : "")}
+              style={{fontSize:'.65rem'}} onClick={() => setNewMkt(p => ({...p, token: 1}))}>EURC</button>
+          </div>
           <div className="cm-img-section" style={{ marginTop: 8 }}>
             <label className="cm-label">Market Image (optional)</label>
             <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
@@ -320,10 +327,17 @@ export default function Predict({
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}
             style={{display:'flex',gap:12,alignItems:'flex-start'}}>
             {m.image && (
-              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
-                <img src={m.image} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
-                  onError={e => e.target.parentElement.style.display = 'none'} />
-              </div>
+              {m.image && m.image.startsWith('__tok') && (
+                <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
+                  {m.image === '__tok1__' ? 'EURC' : 'USDC'}
+                </div>
+              )}
+              {m.image && m.image.startsWith('__img') && (
+                <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                  <img src={m.image.slice(7)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                    onError={e => e.target.parentElement.style.display = 'none'} />
+                </div>
+              )}
             )}
 
             <div style={{flex:1,minWidth:0}}>
@@ -372,6 +386,9 @@ export default function Predict({
                         {eurcRate > 0 && tokenIdx === 1 && (
                           <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
                         )}
+                        <span style={{fontSize:'.55rem',color:'#888',marginLeft:'auto'}}>
+                          Market: {(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 'EURC' : 'USDC'}
+                        </span>
                       </div>
                     <div className="amount-row" style={{marginBottom:6}}>
                       <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
@@ -410,6 +427,9 @@ export default function Predict({
                         {eurcRate > 0 && tokenIdx === 1 && (
                           <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
                         )}
+                        <span style={{fontSize:'.55rem',color:'#888',marginLeft:'auto'}}>
+                          Market: {(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 'EURC' : 'USDC'}
+                        </span>
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
