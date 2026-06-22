@@ -317,14 +317,16 @@ export default function Predict({
         const tokSym = m.tokenIdx === 0 ? 'USDC' : 'EURC';
 
         return (
-          <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}>
+          <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}
+            style={{display:'flex',gap:12,alignItems:'flex-start'}}>
             {m.image && (
-              <div className="mkt-img-wrap">
-                <img src={m.image} alt="" className="mkt-img" style={{objectFit:'contain'}}
+              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                <img src={m.image} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
                   onError={e => e.target.parentElement.style.display = 'none'} />
               </div>
             )}
 
+            <div style={{flex:1,minWidth:0}}>
             <div className="mkt-q">{m.question}
               {cancelled && <span className="mkt-cancelled-badge">Cancelled</span>}
               {resolved && <span className="mkt-ended-badge">Resolved</span>}
@@ -337,6 +339,7 @@ export default function Predict({
               ))}
             </div>
 
+            </div>
             <div className="mkt-time" style={{ fontSize: '.68rem', color: '#777', marginTop: 4 }}>
               {!endedAt ? (() => {
                 const d = m.secsLeft / 86400;
