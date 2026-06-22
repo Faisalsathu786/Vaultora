@@ -328,19 +328,16 @@ export default function Predict({
         return (
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}
             style={{display:'flex',gap:12,alignItems:'flex-start'}}>
-            {m.image && (
-              {m.image && m.image.startsWith('__tok') && (
-                <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
-                  {m.image === '__tok1__' ? 'EURC' : 'USDC'}
-                </div>
-              )}
-              {m.image && m.image.startsWith('__img') && (
-                <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
-                  <img src={m.image.slice(7)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
-                    onError={e => e.target.parentElement.style.display = 'none'} />
-                </div>
-              )}
-            )}
+            {m.image && m.image.startsWith('__tok') ? (
+              <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
+                {m.image === '__tok1__' ? 'EURC' : 'USDC'}
+              </div>
+            ) : m.image && m.image.startsWith('__img') ? (
+              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                <img src={m.image.slice(7)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                  onError={e => e.target.parentElement.style.display = 'none'} />
+              </div>
+            ) : null}
 
             <div style={{flex:1,minWidth:0}}>
             <div className="mkt-q">{m.question}
