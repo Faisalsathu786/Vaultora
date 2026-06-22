@@ -252,32 +252,37 @@ export function useV3PredictionData(wallet, getSigner) {
   };
 
   const createMarket = async () => {
-    if (creatingRef.current) return false;
-    if (!newMkt.question || !newMkt.question.trim()) { setMsg('Please enter a question'); return false; }
-    if (!V3_ADDRESS) { setMsg('Contract address missing'); return false; }
-    creatingRef.current = true;
+    if (creating || !newMkt.question?.trim() || !V3_ADDRESS) {
+      if (!newMkt.question?.trim()) setMsg('Enter a question');
+      else if (!V3_ADDRESS) setMsg('Contract missing');
+      setCreating(false);
+      return false;
+    }
     setCreating(true);
     try {
+      window.__cm = 1;
       const signer = await getSigner();
+      window.__cm = 2;
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
       const imgUrl = newMkt.imageUrl?.trim() || '';
+      window.__cm = 3;
       let tx;
       if (imgUrl) tx = await c.createMarketWithImage(newMkt.question, opts, endTime, imgUrl);
       else tx = await c.createMarket(newMkt.question, opts, endTime);
+      window.__cm = 4;
       await tx.wait();
+      window.__cm = 5;
       setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
       setShowCreateForm(false); fetchMarkets();
       return true;
     } catch (e) {
-      console.error('Create error:', e.reason || e.message);
-      setMsg(e.reason || e.shortMessage || 'Transaction rejected');
+      console.error('Create error:', e?.reason || e?.shortMessage || e?.message || e);
+      setMsg((e?.reason || e?.shortMessage || e?.message || 'Failed').slice(0, 60));
       return false;
-    } finally { creatingRef.current = false; setCreating(false); }
+    } finally { setTimeout(() => setCreating(false), 500); }
   };
-
-  const creatingRef = useRef(false);
 
   const resolveMarket = async (marketId, outcome) => {
     try {
