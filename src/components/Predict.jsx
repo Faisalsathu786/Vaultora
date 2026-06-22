@@ -36,10 +36,12 @@ export default function Predict({
   };
 
   const handleBuy = async (mId, outcome) => {
-    const ok = await buyTokens(mId, outcome, tokenIdx);
+    const m = markets.find(x => x.id === mId);
+    const mTok = m && (m.image || '').startsWith('__tok1__') ? 1 : (m && (m.image || '').startsWith('__img1') ? 1 : 0);
+    const ok = await buyTokens(mId, outcome, mTok);
     if (ok) {
       notify('Bought!', 'success'); fetchMarkets();
-      if (supabaseData?.syncTrade) supabaseData.syncTrade('buy', mId, outcome, betAmt, '0');
+      if (supabaseData?.syncTrade) supabaseData.syncTrade('buy', mId, outcome, betAmt, mTok === 1 ? 'EURC' : 'USDC');
       if (syncBet && wallet) syncBet(mId, wallet, outcome, betAmt, Date.now(), '');
     } else notify('Buy failed', 'error');
   };
@@ -376,20 +378,22 @@ export default function Predict({
 
                 {actionTab === 'buy' ? (
                   <>
-                    <div className="cm-row" style={{marginBottom:4}}>
-                        <label className="cm-label">Pay with</label>
-                        {PAYMENT_TOKENS && PAYMENT_TOKENS.map((t, i) => (
-                          <button key={i} className={"cm-toggle " + (tokenIdx === i ? "active" : "")}
-                            style={{fontSize:'.6rem',padding:'2px 10px'}}
-                            onClick={() => setTokenIdx(i)}>{t.name}</button>
-                        ))}
-                        {eurcRate > 0 && tokenIdx === 1 && (
-                          <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
-                        )}
-                        <span style={{fontSize:'.55rem',color:'#888',marginLeft:'auto'}}>
-                          Market: {(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 'EURC' : 'USDC'}
-                        </span>
-                      </div>
+                    {
+                      (() => {
+                        const mTok = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 1 : 0;
+                        return (
+                          <div className="cm-row" style={{marginBottom:4}}>
+                            <label className="cm-label">Pay with</label>
+                            <button className="cm-toggle active"
+                              style={{fontSize:'.6rem',padding:'2px 10px',backgroundColor:'rgba(215,69,255,.12)',borderColor:'rgba(215,69,255,.25)',color:'#fff',fontWeight:600}}
+                              onClick={()=>{}}>{mTok === 1 ? 'EURC' : 'USDC'}</button>
+                            {mTok === 1 && eurcRate > 0 && (
+                              <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
+                            )}
+                          </div>
+                        );
+                      })()
+                    }
                     <div className="amount-row" style={{marginBottom:6}}>
                       <input className="num-input" type="number" placeholder={"Amount (" + (PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
@@ -418,15 +422,21 @@ export default function Predict({
                         <div className="sell-preview" style={{marginTop:8}}>
                           <div className="sp-label" style={{color:'var(--clr, #34d399)'}}>Buy {opts[oi]}</div>
                           <div className="cm-row" style={{marginBottom:4}}>
-                        <label className="cm-label">Pay with</label>
-                        {PAYMENT_TOKENS && PAYMENT_TOKENS.map((t, i) => (
-                          <button key={i} className={`cm-toggle ${tokenIdx === i ? 'active' : ''}`}
-                            style={{fontSize:'.6rem',padding:'2px 10px'}}
-                            onClick={() => setTokenIdx(i)}>{t.name}</button>
-                        ))}
-                        {eurcRate > 0 && tokenIdx === 1 && (
-                          <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
-                        )}
+                        {
+                          (() => {
+                            const mTok = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 1 : 0;
+                            return (
+                              <>
+                                <label className="cm-label">Pay with</label>
+                                <button className="cm-toggle active"
+                                  style={{fontSize:'.6rem',padding:'2px 10px',backgroundColor:'rgba(215,69,255,.12)',borderColor:'rgba(215,69,255,.25)',color:'#fff',fontWeight:600}}>{mTok === 1 ? 'EURC' : 'USDC'}</button>
+                                {mTok === 1 && eurcRate > 0 && (
+                                  <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
+                                )}
+                              </>
+                            );
+                          })()
+                        }
                         <span style={{fontSize:'.55rem',color:'#888',marginLeft:'auto'}}>
                           Market: {(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 'EURC' : 'USDC'}
                         </span>
