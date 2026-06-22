@@ -336,9 +336,14 @@ export default function Predict({
               <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
                 {m.image === '__tok1__' ? 'EURC' : 'USDC'}
               </div>
-            ) : m.image && m.image.startsWith('__img') ? (
+            ) : m.image && m.image.startsWith('__img1__') ? (
               <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
-                <img src={m.image.slice(7)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                <img src={m.image.slice(8)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                  onError={e => e.target.parentElement.style.display = 'none'} />
+              </div>
+            ) : m.image && m.image.startsWith('http') ? (
+              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                <img src={m.image} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
                   onError={e => e.target.parentElement.style.display = 'none'} />
               </div>
             ) : null}
