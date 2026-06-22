@@ -224,6 +224,8 @@ else activePos.push(entry);
                 <div className="nav-bar" style={{ gap: 6, margin: '8px 0' }}>
                   <button className="cm-toggle" onClick={() => setPortTab('active')}>← Back</button>
                   <button className="cm-toggle active" style={{marginLeft:'auto'}}>History</button>
+                  <button className="btn-secondary" style={{fontSize:'.6rem',padding:'2px 10px',marginLeft:6}}
+                    onClick={() => { if (supabaseData?.fetchTrades) supabaseData.fetchTrades(); setPortTab('active'); setTimeout(() => setPortTab('history'), 100); }}>Refresh</button>
                 </div>
               ) : null}
               {portTab === 'history' ? (() => {
