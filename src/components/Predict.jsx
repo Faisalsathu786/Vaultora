@@ -146,7 +146,7 @@ export default function Predict({
                 style={{ flex: 1, minWidth: 150 }} />
               <label className="btn-secondary upl-btn" style={{ fontSize: '.7rem', padding: '6px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
                 📁 Upload
-                <input type="file" accept="image/*" ref={fileInputRef} onChange={e => { if (fileInputRef.current) fileInputRef.current.value = ''; uploadImage(e); }} style={{ display: 'none' }} />
+                <input type="file" accept="image/*" ref={fileInputRef} onChange={e => { uploadImage(e); setTimeout(() => { if (fileInputRef.current) fileInputRef.current.value = ''; }, 100); }} style={{ display: 'none' }} />
               </label>
             </div>
             {newMkt.imageUrl && (
