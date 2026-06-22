@@ -96,7 +96,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>
           Resolve a market, then Finalize to enable claims. Dispute if needed.
         </p>
-        {(markets||[]).map(m => {
+        {((markets||[]).filter(m => !m.resolved || !m.finalized)).map(m => {
           const rsel = resolvePick[m.id];
           const status = (m.resolved?'R':'')+(m.finalized?'F':'')+(m.disputed?'D':'');
           return (
