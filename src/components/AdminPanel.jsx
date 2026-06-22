@@ -5,7 +5,7 @@ import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
 const RPC = 'https://rpc.testnet.arc.network';
 function getProvider() { return window.ethereum ? new ethers.BrowserProvider(window.ethereum) : new ethers.JsonRpcProvider(RPC); }
 
-export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMarkets }) {
+export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMarkets, syncMarketResult }) {
   const [isOwner, setIsOwner] = useState(false);
   const [tab, setTab] = useState('markets');
   const [loading, setLoading] = useState(false);
@@ -119,7 +119,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
                 </div>
               )}
               <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:2}}>
-                {!m.resolved && <Btn title="Resolve" label={rsel!==undefined ? 'Resolve as '+m.options[rsel] : 'Select outcome first'} cb={rsel!==undefined ? c => c.resolveMarket(m.id, rsel) : ()=>setMsg('Click an outcome above first')} color={rsel!==undefined?'#059669':'#555'} />}
+                {!m.resolved && <Btn title="Resolve" label={rsel!==undefined ? 'Resolve as '+m.options[rsel] : 'Select outcome first'} cb={rsel!==undefined ? async c => { await c.resolveMarket(m.id, rsel); if (typeof syncMarketResult === 'function') syncMarketResult(m.id, rsel); } : ()=>setMsg('Click an outcome above first')} color={rsel!==undefined?'#059669':'#555'} />}
                 {m.resolved && !m.finalized && <Btn title="Finalize" label="Finalize (enable claims)" cb={c => c.finalizeResolve(m.id)} color="#2563eb" />}
                 {m.resolved && !m.disputed && <Btn title="Dispute" label="Dispute" cb={c => c.dispute(m.id)} color="#d97706" />}
                 {m.resolved && m.disputed && <Btn title="Re-resolve" label="Re-resolve" cb={c => c.disputeResolve(m.id, rsel || m.winningOutcome)} color="#7c3aed" />}

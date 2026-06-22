@@ -188,7 +188,19 @@ export default function Predict({
             const pos = positions[m.id];
             if (!pos || pos.balances.every(b => b <= 0)) return;
             const entry = { market: m, pos };
-            if (m.resolved) settledPos.push(entry);
+            if (m.resolved) if (m.resolved) {
+  // Only show winners in settled tab
+  const win = Number(m.winningOutcome);
+  const hasWinTokens = pos.balances[win] > 0;
+  if (m.finalized && hasWinTokens) settledPos.push(entry);
+  else if (m.finalized && !hasWinTokens) {
+    // Loser - save to history
+    const hist = JSON.parse(localStorage.getItem('vt_hist_'+wallet)||'[]');
+    const entry2 = {mId:m.id,q:m.question,pos:pos.balances.map((b,i)=>({o:m.options[i],bal:Number(b)/1e18,won:i===win,claimable:false}))};
+    if (!hist.some(h=>h.mId===m.id)) { hist.push(entry2); localStorage.setItem('vt_hist_'+wallet,JSON.stringify(hist.slice(-30))); }
+  }
+} else if (m.secsLeft <= 0 && !m.cancelled) pendingPos.push(entry);
+else activePos.push(entry);
             else if (m.secsLeft <= 0 && !m.cancelled) pendingPos.push(entry);
             else activePos.push(entry);
           });

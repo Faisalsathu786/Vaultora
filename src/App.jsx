@@ -380,7 +380,8 @@ export default function App() {
           {page === "admin" && (
             <AdminPanel wallet={wallet} getSigner={getSigner}
               notify={showToast} markets={markets}
-              fetchMarkets={fetchMarkets} />
+              fetchMarkets={fetchMarkets}
+              syncMarketResult={syncMarketResult} />
           )}
 
           {page === "leaderboard" && (
