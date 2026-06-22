@@ -216,7 +216,8 @@ export default function Predict({
               ) : null}
               {portTab === 'history' ? (() => {
                 const trades = supabaseData?.trades || [];
-                return trades.length === 0 ? (
+                const claims = JSON.parse(localStorage.getItem('vt_claims')||'[]');
+                return trades.length === 0 && claims.length === 0 ? (
                   <p className="empty">No trade history</p>
                 ) : (
                   <div className="lb-table-wrap" style={{maxHeight:400,overflow:'auto'}}>
@@ -233,8 +234,23 @@ export default function Predict({
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                );
+                  </div>)}
+                  {claims.length > 0 && (
+                    <div style={{marginTop:12}}>
+                      <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:6}}>Claim History</p>
+                      {claims.slice().reverse().map((c,i) => (
+                        <div key={i} className="port-row" style={{display:'flex',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontSize:'.7rem',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>#{c.mId} {c.q}</div>
+                            <div style={{fontSize:.6,color:'#888'}}>{c.o} · {new Date(c.t).toLocaleDateString()}</div>
+                          </div>
+                          <div style={{fontSize:'.75rem',color:'#34d399',fontWeight:600,whiteSpace:'nowrap',marginLeft:8}}>+${c.amt}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
               })() : (
                 list.length === 0 ? (
                   <p className="empty">No {portTab} positions</p>
@@ -303,7 +319,7 @@ export default function Predict({
                                 <div style={{display:'flex',gap:4,flexDirection:'column'}}>
                                   <div style={{fontSize:'.6rem',color:'#34d399',fontWeight:600}}>Won: ${pv.value.toFixed(2)}</div>
                                   <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                    onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim ${pv.value.toFixed(2)}</button>
+                                    onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');const ch=JSON.parse(localStorage.getItem('vt_claims')||'[]');ch.push({mId,q:m.question,o:opt,amt:pv.value.toFixed(2),t:Date.now()});localStorage.setItem('vt_claims',JSON.stringify(ch.slice(-50)));}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim ${pv.value.toFixed(2)}</button>
                                 </div>
                               )}
                             </div>
