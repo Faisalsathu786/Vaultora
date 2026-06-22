@@ -13,12 +13,14 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [resolvePick, setResolvePick] = useState({});
   const [actionLoading, setActionLoading] = useState(false);
   const [tab, setTab] = useState('markets');
-  const [config, setConfig] = useState({ buyFee: '', sellFee: '' });
+  const [config, setConfig] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
+  const [configShow, setConfigShow] = useState(false);
   const [branding, setBranding] = useState({ logo: '', name: '', desc: '' });
-  const [newToken, setNewToken] = useState({ addr: '', symbol: '' });
-  const [toggleToken, setToggleToken] = useState({ idx: '', enabled: true });
+  const [eurcRate, setEurcRate] = useState('');
   const [extendMkt, setExtendMkt] = useState({ id: '', days: '' });
   const [setImg, setSetImg] = useState({ id: '', url: '' });
+  const [withdrawAddr, setWithdrawAddr] = useState('');
+  const [withdrawAmt, setWithdrawAmt] = useState('');
 
   useEffect(() => {
     if (!wallet || !V3_ADDRESS) return;
@@ -31,206 +33,164 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         const c2 = new ethers.Contract(V3_ADDRESS, V3_ABI, getProvider());
         const bf = await c2.buyFee().catch(() => 0n);
         const sf = await c2.sellFee().catch(() => 0n);
-        setConfig({ buyFee: String(bf), sellFee: String(sf) });
-        const logo = await c2.brandLogo().catch(()=>'');
-        const name = await c2.brandName().catch(()=>'');
-        const desc = await c2.brandDescription().catch(()=>'');
+        setConfig(p => ({ ...p, buyFee: String(bf), sellFee: String(sf) }));
+        const db = await c2.disputeBondBps().catch(() => 0n);
+        const dw = await c2.disputeWindowDuration().catch(() => 0n);
+        const minD = await c2.minMarketDuration().catch(() => 0n);
+        const maxD = await c2.maxMarketDuration().catch(() => 0n);
+        setConfig(p => ({ ...p, disputeBond: String(db), disputeWindow: String(dw), minDur: String(minD), maxDur: String(maxD) }));
+        const logo = await c2.brandLogo().catch(() => '');
+        const name = await c2.brandName().catch(() => '');
+        const desc = await c2.brandDescription().catch(() => '');
         setBranding({ logo, name, desc });
+        const er = await c2.eurcRate().catch(() => 0n);
+        setEurcRate(ethers.formatUnits(er, 18));
       } catch(e) {}
     })();
   }, [wallet]);
 
-  const run = async (label, fn) => {
+  const run = (title, cb) => {
     setActionLoading(true);
-    try {
-      const signer = await getSigner();
-      const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
-      await (await fn(c)).wait();
-      notify(label + ' successful!', 'success');
-      fetchMarkets();
-    } catch (e) {
-      notify(label + ' failed: ' + (e?.reason || e?.message || '').slice(0, 80), 'error');
-    }
-    setActionLoading(false);
+    (async () => {
+      try {
+        const signer = await getSigner();
+        const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
+        await cb(c);
+        notify(title + ' done', 'success');
+        if (typeof fetchMarkets === 'function') fetchMarkets();
+      } catch(e) { notify(title + ': ' + (e.reason || e.message), 'error'); }
+      setActionLoading(false);
+    })();
   };
 
-  if (!wallet || !V3_ADDRESS) return null;
-  if (!isOwner) return (
-    <div className="card">
-      <p className="empty">Only contract owner can access this panel</p>
-      <p style={{fontSize:'.6rem',color:'#777',textAlign:'center'}}>Connected: {wallet?.toLowerCase()}</p>
-    </div>
+  const btn = (title, label, cb) => (
+    <button disabled={actionLoading} style={{fontSize:'.65rem',padding:'3px 8px',margin:2}}
+      onClick={() => run(title, cb)}>{label}</button>
   );
 
-  const nt = (id, label) => (
-    <button className={"cm-toggle " + (tab === id ? "active" : "")}
-      onClick={() => setTab(id)} style={{fontSize:'.65rem',padding:'4px 10px'}}>{label}</button>
+  if (!isOwner) return (
+    <div className="card"><p className="empty">Admin access required - connect owner wallet</p></div>
   );
 
   return (
-    <div className="pg">
-      <div className="nav-bar" style={{gap:4,marginBottom:10}}>
-        {nt('markets','Markets')}{nt('config','Config')}{nt('tokens','Tokens')}{nt('fees','Fees')}
+    <div className="card">
+      <p className="card-lbl">Admin Panel</p>
+      <div style={{display:'flex',gap:6,marginBottom:8,flexWrap:'wrap'}}>
+        <button className={"cm-toggle " + (tab==='markets'?'active':'')} onClick={()=>setTab('markets')}>Markets</button>
+        <button className={"cm-toggle " + (tab==='config'?'active':'')} onClick={()=>setTab('config')}>Config</button>
+        <button className={"cm-toggle " + (tab==='branding'?'active':'')} onClick={()=>setTab('branding')}>Branding</button>
       </div>
 
       {tab === 'markets' && (
-        <div className="card">
-          <p className="card-lbl">All Markets</p>
-          {markets.length === 0 ? <p className="empty">No markets</p> : markets.map(m => {
-            const opts = m.options || [];
-            const expired = !m.resolved && !m.cancelled && m.secsLeft <= 0;
+        <div>
+          {(markets||[]).map(m => {
             const sel = resolvePick[m.id];
             return (
-              <div key={m.id} className="mkt-card" style={{marginBottom:8}}>
-                <p style={{fontSize:'.7rem',fontWeight:600,margin:'0 0 2px'}}>
-                  #{m.id} {m.question}
-                  {m.resolved ? <span className="mkt-ended-badge">Resolved</span> : null}
-                  {m.cancelled ? <span className="mkt-cancelled-badge">Cancelled</span> : null}
-                  {expired ? <span className="mkt-ended-badge" style={{background:'#fbbf24',color:'#000'}}>Expired</span> : null}
-                  {!m.resolved && !m.cancelled && m.secsLeft > 0 ? <span style={{fontSize:'.55rem',color:'var(--dim)'}}>{Math.floor(m.secsLeft/86400)}d left</span> : null}
-                </p>
-                <div style={{display:'flex',gap:4,flexWrap:'wrap',margin:'4px 0'}}>
-                  {opts.map((opt, oi) => (
-                    m.resolved ? (
-                      <span key={oi} className={"mkt-out " + (oi === m.winningOutcome ? "win" : "neu")}
-                        style={{fontSize:'.6rem',opacity:oi===m.winningOutcome?1:.4}}>
-                        {opt}{oi===m.winningOutcome?' ✓':''}
-                      </span>
-                    ) : (
-                      <button key={oi} className={"mkt-out " + (sel===oi?"win":"")}
-                        style={{fontSize:'.6rem',cursor:'pointer',border:sel===oi?'2px solid #34d399':'none',background:sel===oi?'rgba(52,211,153,.1)':'transparent'}}
-                        onClick={() => setResolvePick(p=>({...p,[m.id]:oi}))}>
-                        {opt}{sel===oi?' ✓':''}
-                      </button>
-                    )
-                  ))}
-                </div>
-                <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:4}}>
-                  {!m.resolved && !m.cancelled && (<>
-                    <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-                      disabled={actionLoading || sel===undefined}
-                      onClick={() => run('Resolve', c => c.resolveMarket(m.id, sel))}>Resolve</button>
-                    <button className="btn-secondary" style={{fontSize:'.6rem',padding:'3px 10px',color:'#f87171'}}
-                      disabled={actionLoading}
-                      onClick={() => run('Cancel', c => c.cancelMarket(m.id))}>Cancel</button>
-                  </>)}
-                  <button className="btn-secondary" style={{fontSize:'.55rem',padding:'2px 8px'}}
-                    onClick={() => setExtendMkt({id:String(m.id),days:''})}>Extend</button>
-                  <button className="btn-secondary" style={{fontSize:'.55rem',padding:'2px 8px'}}
-                    onClick={() => setSetImg({id:String(m.id),url:m.image||''})}>Image</button>
-                </div>
-                {extendMkt.id === String(m.id) && (
-                  <div style={{display:'flex',gap:4,marginTop:4,alignItems:'center'}}>
-                    <input className="num-input" type="number" placeholder="Days" value={extendMkt.days}
-                      onChange={e => setExtendMkt(p=>({...p,days:e.target.value}))} style={{width:60,fontSize:'.6rem'}} />
-                    <button className="btn-primary" style={{fontSize:'.55rem',padding:'2px 8px'}}
-                      disabled={actionLoading||!extendMkt.days}
-                      onClick={() => {run('Extend Market', c => c.extendMarket(m.id, Math.floor(Date.now()/1000)+Number(extendMkt.days)*86400)); setExtendMkt({id:'',days:''});}}>Save</button>
-                  </div>
-                )}
-                {setImg.id === String(m.id) && (
-                  <div style={{display:'flex',gap:4,marginTop:4,alignItems:'center'}}>
-                    <input className="num-input" placeholder="Image URL" value={setImg.url}
-                      onChange={e => setSetImg(p=>({...p,url:e.target.value}))} style={{flex:1,fontSize:'.6rem'}} />
-                    <button className="btn-primary" style={{fontSize:'.55rem',padding:'2px 8px'}}
-                      disabled={actionLoading}
-                      onClick={() => {run('Set Image', c => c.setMarketImage(m.id, setImg.url)); setSetImg({id:'',url:''});}}>Save</button>
-                  </div>
-                )}
+              <div key={m.id} className="cm-row" style={{flexWrap:'wrap',marginBottom:4,fontSize:'.65rem'}}>
+                <span style={{minWidth:30}}>#{m.id}</span>
+                <span style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.question}</span>
+                <span style={{color:'var(--dim)',padding:'0 4px'}}>
+                  {m.resolved?'R ':''}{m.finalized?'F ':''}{m.disputed?'D ':''}
+                </span>
+                <select value={sel||''} onChange={e=>setResolvePick(p=>({...p,[m.id]:Number(e.target.value)}))}>
+                  <option value="">-</option>
+                  {(m.options||[]).map((o,i)=><option key={i} value={i}>{o}</option>)}
+                </select>
+                {btn('Resolve','Resolve', c => c.resolveMarket(m.id, sel))}
+                {btn('Finalize','Finalize', c => c.finalizeResolve(m.id))}
+                {btn('Dispute','Dispute', c => c.dispute(m.id))}
+                {btn('Re-resolve','Re-resolve', c => c.disputeResolve(m.id, sel))}
               </div>
             );
           })}
+
+          <p className="cm-label" style={{marginTop:8}}>Extend Deadline</p>
+          <div className="cm-row" style={{flexWrap:'wrap'}}>
+            <input className="num-input" style={{width:50}} type="number" placeholder="ID" value={extendMkt.id}
+              onChange={e=>setExtendMkt(p=>({...p,id:e.target.value}))} />
+            <input className="num-input" style={{width:60}} type="number" placeholder="days" value={extendMkt.days}
+              onChange={e=>setExtendMkt(p=>({...p,days:e.target.value}))} />
+            {btn('Extend','Save', c => c.extendMarket(Number(extendMkt.id), Math.floor(Date.now()/1000)+Number(extendMkt.days)*86400))}
+          </div>
+
+          <p className="cm-label" style={{marginTop:8}}>Set Image</p>
+          <div className="cm-row" style={{flexWrap:'wrap'}}>
+            <input className="num-input" style={{width:40}} type="number" placeholder="ID" value={setImg.id}
+              onChange={e=>setSetImg(p=>({...p,id:e.target.value}))} />
+            <input style={{flex:1,minWidth:120}} type="text" placeholder="URL" value={setImg.url}
+              onChange={e=>setSetImg(p=>({...p,url:e.target.value}))} />
+            {btn('Image','Save', c => c.setMarketImage(Number(setImg.id), setImg.url))}
+          </div>
+
+          <p className="cm-label" style={{marginTop:8}}>Withdraw Fees</p>
+          <div className="cm-row" style={{flexWrap:'wrap'}}>
+            <input style={{flex:1,minWidth:120}} type="text" placeholder="token addr (default USDC)" value={withdrawAddr}
+              onChange={e=>setWithdrawAddr(e.target.value)} />
+            <input className="num-input" style={{width:80}} type="text" placeholder="amount" value={withdrawAmt}
+              onChange={e=>setWithdrawAmt(e.target.value)} />
+            {btn('Withdraw','Withdraw', c => c.withdrawTokens(
+              withdrawAddr||'0x3600000000000000000000000000000000000000',
+              ethers.parseUnits(withdrawAmt||'0',6)
+            ))}
+          </div>
         </div>
       )}
 
       {tab === 'config' && (
-        <div className="card">
-          <p className="card-lbl">Contract Configuration</p>
-          <div className="cm-row" style={{marginTop:8}}>
-            <label className="cm-label" style={{width:70}}>Min Bet</label>
-            <input className="num-input" type="number" value={config.buyFee} style={{width:100,fontSize:'.65rem'}}
-              onChange={e => setConfig(p=>({...p,buyFee:e.target.value}))} />
-            <label className="cm-label" style={{marginLeft:8,width:60}}>Fee BPS</label>
-            <input className="num-input" type="number" value={config.sellFee} style={{width:60,fontSize:'.65rem'}}
-              onChange={e => setConfig(p=>({...p,sellFee:e.target.value}))} />
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px',marginLeft:6}}
-              disabled={actionLoading}
-              onClick={() => run('Update Config', c => c.updateFees(Number(config.buyFee||0), Number(config.sellFee||0)))}>Save</button>
+        <div>
+          <p className="cm-label">Fees (bps, 100 = 1%)</p>
+          <div className="cm-row" style={{flexWrap:'wrap',gap:6}}>
+            <span>Buy:</span>
+            <input className="num-input" style={{width:60}} type="number" value={config.buyFee}
+              onChange={e=>setConfig(p=>({...p,buyFee:e.target.value}))} />
+            <span>Sell:</span>
+            <input className="num-input" style={{width:60}} type="number" value={config.sellFee}
+              onChange={e=>setConfig(p=>({...p,sellFee:e.target.value}))} />
+            {btn('Fees','Save', c => c.updateFees(Number(config.buyFee||0), Number(config.sellFee||0)))}
           </div>
 
-          <p className="card-lbl" style={{marginTop:16}}>Branding</p>
-          <input className="num-input" placeholder="Logo URL" value={branding.logo} style={{fontSize:'.65rem'}}
+          <p className="cm-label" style={{marginTop:8}}>Dispute & Duration (set window=0 for no waiting)</p>
+          <div className="cm-row" style={{flexWrap:'wrap',gap:4}}>
+            <span>Bond(bps):</span>
+            <input className="num-input" style={{width:50}} type="number" value={config.disputeBond}
+              onChange={e=>setConfig(p=>({...p,disputeBond:e.target.value}))} />
+            <span>Window(s):</span>
+            <input className="num-input" style={{width:70}} type="number" value={config.disputeWindow}
+              onChange={e=>setConfig(p=>({...p,disputeWindow:e.target.value}))} />
+            <span>Min(s):</span>
+            <input className="num-input" style={{width:70}} type="number" value={config.minDur}
+              onChange={e=>setConfig(p=>({...p,minDur:e.target.value}))} />
+            <span>Max(s):</span>
+            <input className="num-input" style={{width:70}} type="number" value={config.maxDur}
+              onChange={e=>setConfig(p=>({...p,maxDur:e.target.value}))} />
+          </div>
+          {btn('Config','Save All', c => c.updateConfig(
+            Number(config.disputeBond||0), Number(config.disputeWindow||0),
+            Number(config.minDur||0), Number(config.maxDur||0)
+          ))}
+
+          <p className="cm-label" style={{marginTop:8}}>EURC Rate</p>
+          <div className="cm-row" style={{flexWrap:'wrap',gap:6}}>
+            <input className="num-input" style={{width:100}} type="text" value={eurcRate}
+              onChange={e=>setEurcRate(e.target.value)} />
+            <span>1 EURC = ? USDC</span>
+            {btn('EURC Rate','Set', c => c.setEurcRate(ethers.parseUnits(eurcRate||'1',18)))}
+          </div>
+        </div>
+      )}
+
+      {tab === 'branding' && (
+        <div>
+          <p className="cm-label">Brand Logo URL</p>
+          <input type="text" value={branding.logo}
             onChange={e => setBranding(p=>({...p,logo:e.target.value}))} />
-          <div className="cm-row" style={{marginTop:4}}>
-            <input className="num-input" placeholder="Site Name" value={branding.name} style={{flex:1,fontSize:'.65rem'}}
-              onChange={e => setBranding(p=>({...p,name:e.target.value}))} />
-            <input className="num-input" placeholder="Description" value={branding.desc} style={{flex:2,fontSize:'.65rem'}}
-              onChange={e => setBranding(p=>({...p,desc:e.target.value}))} />
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading}
-              onClick={() => run('Update Branding', c => c.setBranding(branding.logo, branding.name, branding.desc))}>Save</button>
-          </div>
-
-          <p className="card-lbl" style={{marginTop:16}}>Emergency</p>
-          <div style={{display:'flex',gap:6}}>
-            <button className="btn-secondary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading} onClick={() => run('Pause', c => c.setPaused(true))}>Pause All</button>
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading} onClick={() => run('Unpause', c => c.setPaused(false))}>Unpause</button>
-          </div>
-        </div>
-      )}
-
-      {tab === 'tokens' && (
-        <div className="card">
-          <p className="card-lbl">Payment Tokens</p>
-          <div className="cm-row" style={{marginTop:8}}>
-            <label className="cm-label">Add Token</label>
-            <input className="num-input" placeholder="Address" value={newToken.addr} style={{flex:2,fontSize:'.65rem'}}
-              onChange={e => setNewToken(p=>({...p,addr:e.target.value}))} />
-            <input className="num-input" placeholder="Symbol" value={newToken.symbol} style={{width:80,fontSize:'.65rem'}}
-              onChange={e => setNewToken(p=>({...p,symbol:e.target.value}))} />
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading||!newToken.addr}
-              onClick={() => {run('Add Token', c => c.addToken(newToken.addr, newToken.symbol)); setNewToken({addr:'',symbol:''});}}>Add</button>
-          </div>
-          <div className="cm-row" style={{marginTop:8,alignItems:'center'}}>
-            <label className="cm-label" style={{width:80}}>Toggle</label>
-            <input className="num-input" type="number" placeholder="Token index (0,1...)" value={toggleToken.idx} style={{width:120,fontSize:'.65rem'}}
-              onChange={e => setToggleToken(p=>({...p,idx:e.target.value}))} />
-            <button className="btn-secondary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading||toggleToken.idx===''}
-              onClick={() => run('Disable Token', c => c.toggleToken(Number(toggleToken.idx), false))}>Disable</button>
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px'}}
-              disabled={actionLoading||toggleToken.idx===''}
-              onClick={() => run('Enable Token', c => c.toggleToken(Number(toggleToken.idx), true))}>Enable</button>
-          </div>
-        </div>
-      )}
-
-      {tab === 'fees' && (
-        <div className="card">
-          <p className="card-lbl">Fees & Ownership</p>
-          <p style={{fontSize:'.65rem',color:'var(--dim)'}}>Buy fee: {config.buyFee} bps · Sell fee: {config.sellFee} bps</p>
-          <div style={{marginTop:8,display:'flex',gap:6,flexDirection:'column'}}>
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px',width:180}}
-              disabled={actionLoading}
-              onClick={() => run('Withdraw USDC Fees', c => c.withdrawFees(0))}>Withdraw USDC Fees</button>
-            <button className="btn-primary" style={{fontSize:'.6rem',padding:'3px 10px',width:180}}
-              disabled={actionLoading}
-              onClick={() => run('Withdraw EURC Fees', c => c.withdrawFees(1))}>Withdraw EURC Fees</button>
-          </div>
-          <p className="card-lbl" style={{marginTop:16}}>Transfer Ownership</p>
-          <div style={{display:'flex',gap:6}}>
-            <input className="num-input" placeholder="New owner address" id="newOwner" style={{flex:1,fontSize:'.65rem'}} />
-            <button className="btn-secondary" style={{fontSize:'.6rem',padding:'3px 10px',color:'#f87171'}}
-              onClick={() => {
-                const inp = document.getElementById('newOwner');
-                if (!inp.value.trim()) { notify('Enter address', 'error'); return; }
-                run('Transfer Ownership', c => c.transferOwnership(inp.value.trim()));
-                inp.value = '';
-              }}>Transfer</button>
-          </div>
+          <p className="cm-label">Name</p>
+          <input type="text" value={branding.name}
+            onChange={e => setBranding(p=>({...p,name:e.target.value}))} />
+          <p className="cm-label">Description</p>
+          <input type="text" value={branding.desc}
+            onChange={e => setBranding(p=>({...p,desc:e.target.value}))} />
+          <div style={{marginTop:6}}>{btn('Branding','Save All', c => c.setBranding(branding.logo, branding.name, branding.desc))}</div>
         </div>
       )}
     </div>
