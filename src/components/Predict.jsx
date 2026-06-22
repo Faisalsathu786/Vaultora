@@ -81,11 +81,15 @@ export default function Predict({
   };
 
   const handleCreate = async () => {
-    console.log('[Predict] Create Market clicked');
-    const ok = await createMarket();
-    console.log('[Predict] createMarket returned:', ok);
-    if (ok) { notify('Market created!', 'success'); }
-    else { notify('Failed — check console (F12)', 'error'); }
+    try {
+      const ok = await createMarket();
+      if (ok) notify('Market created!', 'success');
+      else notify('Failed - check console', 'error');
+    } catch (e) {
+      const msg = e?.reason || e?.shortMessage || e?.message || 'Unknown error';
+      console.error('Create market error:', msg);
+      notify(msg.slice(0, 80), 'error');
+    }
   };
 
   const isOpen = (m) => !m.resolved && !m.cancelled && m.secsLeft > 0;
