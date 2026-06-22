@@ -15,6 +15,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [setImg, setSetImg] = useState({ id: '', url: '' });
   const [cfg, setCfg] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
   const [brand, setBrand] = useState({ logo: '', name: '', desc: '' });
+  const [dsgn, setDsgn] = useState({ bg: '', primary: '', accent: '', cardBg: '', theme: 'dark' });
   const [eurcRate, setEurcRate] = useState('');
   const [accFees, setAccFees] = useState({ usdc: '0', eurc: '0' });
 
@@ -40,6 +41,13 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         ]);
         setBrand({ logo, name, desc });
         setEurcRate(ethers.formatUnits(er, 18));
+        // Parse design settings from brandDescription
+        try {
+          if (desc && desc.startsWith("{")) {
+            const d = JSON.parse(desc);
+            setDsgn({ bg: d.bg || '', primary: d.primary || '', accent: d.accent || '', cardBg: d.cardBg || '', theme: d.theme || 'dark' });
+          }
+        } catch(e) {}
         
         const [usdcFees, eurcFees] = await Promise.all([
           c2.accumulatedFees("0x3600000000000000000000000000000000000000").catch(()=>0n),
@@ -74,7 +82,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
       {/* Tab bar */}
       <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',borderBottom:'1px solid #333',paddingBottom:8}}>
-        {['markets','config','branding'].map(t => (
+        {['markets','config','design','branding'].map(t => (
           <button key={t} className="btn-primary" style={{padding:'4px 14px',fontSize:'.7rem',opacity:tab===t?1:.5}}
             onClick={()=>setTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
         ))}
@@ -212,6 +220,74 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       </>}
 
       {/* === BRANDING TAB === */}
+      {tab === 'design' && <>
+        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize site appearance for all users</p>
+        
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Background</p>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <input value={dsgn.bg} onChange={e=>setDsgn(p=>({...p,bg:e.target.value}))}
+              placeholder="Background image URL"
+              style={{flex:1,padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            {dsgn.bg && <span style={{fontSize:'.5rem',color:'#34d399'}}>set</span>}
+          </div>
+        </div>
+
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Theme Colors</p>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+            <div>
+              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Primary</label>
+              <input value={dsgn.primary} onChange={e=>setDsgn(p=>({...p,primary:e.target.value}))}
+                placeholder="#059669"
+                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            </div>
+            <div>
+              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Accent</label>
+              <input value={dsgn.accent} onChange={e=>setDsgn(p=>({...p,accent:e.target.value}))}
+                placeholder="#2563eb"
+                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            </div>
+            <div>
+              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Card Background</label>
+              <input value={dsgn.cardBg} onChange={e=>setDsgn(p=>({...p,cardBg:e.target.value}))}
+                placeholder="#111827"
+                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            </div>
+            <div>
+              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Theme</label>
+              <select value={dsgn.theme} onChange={e=>setDsgn(p=>({...p,theme:e.target.value}))}
+                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}}>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Market Image Display</p>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label style={{fontSize:'.6rem',color:'#999'}}>Width:</label>
+            <input value={dsgn.mktImgW || ''} onChange={e=>setDsgn(p=>({...p,mktImgW:e.target.value}))}
+              placeholder="auto" type="number"
+              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            <label style={{fontSize:'.6rem',color:'#999'}}>Height:</label>
+            <input value={dsgn.mktImgH || ''} onChange={e=>setDsgn(p=>({...p,mktImgH:e.target.value}))}
+              placeholder="auto" type="number"
+              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            <span style={{fontSize:'.5rem',color:'#888'}}>px (blank=auto)</span>
+          </div>
+        </div>
+
+        {btn("Design","Save All Settings", c => {
+          const design = {...dsgn};
+          // Encode design as JSON inside brandDescription
+          const json = JSON.stringify(design);
+          return c.setBranding(brand.logo, brand.name, json);
+        })}
+      </>}
+
       {tab === 'branding' && <>
         <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize the site branding</p>
         <div style={{display:'flex',flexDirection:'column',gap:8}}>
