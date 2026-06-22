@@ -223,19 +223,9 @@ body {
 
   /* Market image: natural aspect ratio, not fixed crop */
   .mkt-img-wrap {
-    margin: 0;
-    width: 100%;
-    border-radius: 0;
-    overflow: hidden;
-    background: var(--surf2);
+    flex-shrink: 0;
   }
   .mkt-img {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-height: 280px;
-    object-fit: contain;
-    object-position: center;
     transition: transform .3s ease;
   }
   .mkt-card:hover .mkt-img { transform: scale(1.02); }
@@ -1653,20 +1643,13 @@ body {
 
 /* ── MARKET IMAGE — MOBILE BASE ── */
 .mkt-img-wrap {
-  border-radius: var(--r2) var(--r2) 0 0;
+  border-radius: 10px;
   overflow: hidden;
-  margin: 0 0 12px 0;
-  width: 100%;
-  background: var(--surf2);
-  position: relative;
+  flex-shrink: 0;
 }
 .mkt-img {
   display: block;
-  width: 100%;
-  height: auto;
-  max-height: 240px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
 }
 
 .cm-optional {
@@ -3066,9 +3049,7 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0,0,0,.15);
 }
-.mkt-img-wrap {
-  transition: opacity .3s;
-}
+
 .mkt-img {
   transition: transform .4s ease;
 }
