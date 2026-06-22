@@ -221,71 +221,62 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
       {/* === BRANDING TAB === */}
       {tab === 'design' && <>
-        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize site appearance for all users</p>
-        
-        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
-          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Background</p>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <input value={dsgn.bg} onChange={e=>setDsgn(p=>({...p,bg:e.target.value}))}
-              placeholder="Background image URL"
-              style={{flex:1,padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            {dsgn.bg && <span style={{fontSize:'.5rem',color:'#34d399'}}>set</span>}
-          </div>
+        <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize site appearance — all users see changes</p>
+
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:8}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Background Image</p>
+          <input value={dsgn.bg} onChange={e=>setDsgn(p=>({...p,bg:e.target.value}))}
+            placeholder="https://example.com/bg.jpg"
+            style={{width:'100%',padding:'6px 8px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem',marginBottom:6}} />
+          <Btn title="Update Background" label="Save Background" cb={c => {
+            const json = JSON.stringify({...dsgn});
+            return c.setBranding(brand.logo||'', brand.name||'', json);
+          }} />
         </div>
 
-        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
-          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Theme Colors</p>
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:8}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Colors & Theme</p>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-            <div>
-              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Primary</label>
-              <input value={dsgn.primary} onChange={e=>setDsgn(p=>({...p,primary:e.target.value}))}
-                placeholder="#059669"
-                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            </div>
-            <div>
-              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Accent</label>
-              <input value={dsgn.accent} onChange={e=>setDsgn(p=>({...p,accent:e.target.value}))}
-                placeholder="#2563eb"
-                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            </div>
-            <div>
-              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Card Background</label>
-              <input value={dsgn.cardBg} onChange={e=>setDsgn(p=>({...p,cardBg:e.target.value}))}
-                placeholder="#111827"
-                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            </div>
-            <div>
-              <label style={{fontSize:'.6rem',color:'#999',display:'block'}}>Theme</label>
+            <div><label style={{fontSize:'.6rem',color:'#999'}}>Primary</label>
+              <input value={dsgn.primary} onChange={e=>setDsgn(p=>({...p,primary:e.target.value}))} placeholder="#059669"
+                style={{width:'100%',padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} /></div>
+            <div><label style={{fontSize:'.6rem',color:'#999'}}>Accent</label>
+              <input value={dsgn.accent} onChange={e=>setDsgn(p=>({...p,accent:e.target.value}))} placeholder="#2563eb"
+                style={{width:'100%',padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} /></div>
+            <div><label style={{fontSize:'.6rem',color:'#999'}}>Card BG</label>
+              <input value={dsgn.cardBg} onChange={e=>setDsgn(p=>({...p,cardBg:e.target.value}))} placeholder="#111827"
+                style={{width:'100%',padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} /></div>
+            <div><label style={{fontSize:'.6rem',color:'#999'}}>Theme</label>
               <select value={dsgn.theme} onChange={e=>setDsgn(p=>({...p,theme:e.target.value}))}
-                style={{width:'100%',padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}}>
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-              </select>
-            </div>
+                style={{width:'100%',padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}}>
+                <option value="dark">Dark</option><option value="light">Light</option></select></div>
+          </div>
+          <div style={{marginTop:6}}>
+            <Btn title="Update Colors" label="Save Colors" cb={c => {
+              const json = JSON.stringify({...dsgn});
+              return c.setBranding(brand.logo||'', brand.name||'', json);
+            }} />
           </div>
         </div>
 
-        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:10}}>
-          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Market Image Display</p>
-          <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <label style={{fontSize:'.6rem',color:'#999'}}>Width:</label>
-            <input value={dsgn.mktImgW || ''} onChange={e=>setDsgn(p=>({...p,mktImgW:e.target.value}))}
-              placeholder="auto" type="number"
-              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            <label style={{fontSize:'.6rem',color:'#999'}}>Height:</label>
-            <input value={dsgn.mktImgH || ''} onChange={e=>setDsgn(p=>({...p,mktImgH:e.target.value}))}
-              placeholder="auto" type="number"
-              style={{width:70,padding:'4px 6px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
-            <span style={{fontSize:'.5rem',color:'#888'}}>px (blank=auto)</span>
+        <div style={{background:'#1a1a2e',padding:10,borderRadius:8,marginBottom:8}}>
+          <p style={{fontSize:'.7rem',color:'#60a5fa',marginBottom:4}}>Market Image Size</p>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            <span style={{fontSize:'.6rem',color:'#999'}}>W:</span>
+            <input value={dsgn.mktImgW||''} onChange={e=>setDsgn(p=>({...p,mktImgW:e.target.value}))} type="number" placeholder="auto"
+              style={{width:70,padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            <span style={{fontSize:'.6rem',color:'#999'}}>H:</span>
+            <input value={dsgn.mktImgH||''} onChange={e=>setDsgn(p=>({...p,mktImgH:e.target.value}))} type="number" placeholder="auto"
+              style={{width:70,padding:'4px',background:'#222',border:'1px solid #444',borderRadius:4,color:'#eee',fontSize:'.65rem'}} />
+            <span style={{fontSize:'.5rem',color:'#888'}}>px</span>
+          </div>
+          <div style={{marginTop:6}}>
+            <Btn title="Update Image Size" label="Save Image Size" cb={c => {
+              const json = JSON.stringify({...dsgn});
+              return c.setBranding(brand.logo||'', brand.name||'', json);
+            }} />
           </div>
         </div>
-
-        {Btn({title:"Design", label:"Save All Settings", cb: c => {
-          const design = {...dsgn};
-          // Encode design as JSON inside brandDescription
-          const json = JSON.stringify(design);
-          return c.setBranding(brand.logo, brand.name, json);
-        })}
       </>}
 
       {tab === 'branding' && <>
