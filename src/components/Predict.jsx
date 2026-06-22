@@ -23,6 +23,7 @@ export default function Predict({
   const [claiming, setClaiming] = useState({});
   const [mktImages, setMktImages] = useState({});
   const [sellPreview, setSellPreview] = useState(null);
+  const fileInputRef = useRef(null);
   const [portTab, setPortTab] = useState('active'); // active | pending | settled
   const [sellSel, setSellSel] = useState(null); // "mktId_outcome"
   const [buySel, setBuySel] = useState(null);
@@ -145,7 +146,7 @@ export default function Predict({
                 style={{ flex: 1, minWidth: 150 }} />
               <label className="btn-secondary upl-btn" style={{ fontSize: '.7rem', padding: '6px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}>
                 📁 Upload
-                <input type="file" accept="image/*" onChange={uploadImage} style={{ display: 'none' }} />
+                <input type="file" accept="image/*" ref={fileInputRef} onChange={uploadImage} style={{ display: 'none' }} />
               </label>
             </div>
             {newMkt.imageUrl && (

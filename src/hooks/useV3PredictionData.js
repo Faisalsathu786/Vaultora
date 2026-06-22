@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI, ERC20_ABI } from '../constants/contracts.js';
 
@@ -252,41 +252,32 @@ export function useV3PredictionData(wallet, getSigner) {
   };
 
   const createMarket = async () => {
-    console.log('[CreateMarket] question:', newMkt.question, 'V3:', V3_ADDRESS, 'days:', newMkt.days);
-    if (!newMkt.question || !newMkt.question.trim()) { 
-      console.warn('[CreateMarket] question empty'); 
-      setMsg('Please enter a question'); 
-      setCreating(false); 
-      return false; 
-    }
-    if (!V3_ADDRESS) { 
-      console.warn('[CreateMarket] V3_ADDRESS missing'); 
-      setMsg('Contract address missing'); 
-      setCreating(false); 
-      return false; 
-    }
+    if (creatingRef.current) return false;
+    if (!newMkt.question || !newMkt.question.trim()) { setMsg('Please enter a question'); return false; }
+    if (!V3_ADDRESS) { setMsg('Contract address missing'); return false; }
+    creatingRef.current = true;
     setCreating(true);
     try {
-      console.log('[CreateMarket] getting signer...');
       const signer = await getSigner();
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
       const imgUrl = newMkt.imageUrl?.trim() || '';
-
       let tx;
-      if (imgUrl) {
-        tx = await c.createMarketWithImage(newMkt.question, opts, endTime, imgUrl);
-      } else {
-        tx = await c.createMarket(newMkt.question, opts, endTime);
-      }
+      if (imgUrl) tx = await c.createMarketWithImage(newMkt.question, opts, endTime, imgUrl);
+      else tx = await c.createMarket(newMkt.question, opts, endTime);
       await tx.wait();
       setNewMkt({ question: '', options: ['YES', 'NO'], days: '7', token: 0, imageUrl: '' });
       setShowCreateForm(false); fetchMarkets();
       return true;
-    } catch (e) { console.error('Create error:', e); setMsg(e.reason || e.shortMessage || e.message); setCreating(false); return false; }
-    finally { setCreating(false); }
+    } catch (e) {
+      console.error('Create error:', e.reason || e.message);
+      setMsg(e.reason || e.shortMessage || 'Transaction rejected');
+      return false;
+    } finally { creatingRef.current = false; setCreating(false); }
   };
+
+  const creatingRef = useRef(false);
 
   const resolveMarket = async (marketId, outcome) => {
     try {
