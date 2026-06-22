@@ -25,7 +25,11 @@ try {
   });
   const j = await r.json();
   if (j.result) {
-    const txt = atob(j.result.slice(2).match(/.{1,2}/g).map(c=>String.fromCharCode(parseInt(c,16))).join("")).replace(/[^ -~]/g,"");
+    const hex = j.result.slice(2);
+    const bytes = [];
+    for (let i = 0; i < hex.length; i += 2) bytes.push(parseInt(hex.slice(i,i+2),16));
+    // Skip first 64 bytes (offset + length), rest is UTF-8 content
+    const txt = String.fromCharCode(...bytes.slice(64)).replace(/[^ -~]/g,"");
     if (txt.startsWith("{")) {
       const d = JSON.parse(txt);
       const root = document.querySelector(":root") || document.documentElement;
