@@ -78,10 +78,11 @@ export default function Predict({
   };
 
   const handleCreate = async () => {
-    setMsg('');
+    console.log('[Predict] Create Market clicked');
     const ok = await createMarket();
-    if (ok) notify('Market created!', 'success');
-    else notify('Failed: ' + (msg || 'check console'), 'error');
+    console.log('[Predict] createMarket returned:', ok);
+    if (ok) { notify('Market created!', 'success'); }
+    else { notify('Failed — check console (F12)', 'error'); }
   };
 
   const isOpen = (m) => !m.resolved && !m.cancelled && m.secsLeft > 0;

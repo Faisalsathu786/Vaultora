@@ -252,9 +252,22 @@ export function useV3PredictionData(wallet, getSigner) {
   };
 
   const createMarket = async () => {
-    if (!newMkt.question.trim() || !V3_ADDRESS) { setCreating(false); return false; }
+    console.log('[CreateMarket] question:', newMkt.question, 'V3:', V3_ADDRESS, 'days:', newMkt.days);
+    if (!newMkt.question || !newMkt.question.trim()) { 
+      console.warn('[CreateMarket] question empty'); 
+      setMsg('Please enter a question'); 
+      setCreating(false); 
+      return false; 
+    }
+    if (!V3_ADDRESS) { 
+      console.warn('[CreateMarket] V3_ADDRESS missing'); 
+      setMsg('Contract address missing'); 
+      setCreating(false); 
+      return false; 
+    }
     setCreating(true);
     try {
+      console.log('[CreateMarket] getting signer...');
       const signer = await getSigner();
       const c = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
