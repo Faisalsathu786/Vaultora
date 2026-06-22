@@ -392,9 +392,9 @@ export default function Predict({
                       })()
                     }
                     <div className="amount-row" style={{marginBottom:6}}>
-                      <input className="num-input" type="number" placeholder={"Amount (" + (mTok === 1 ? 'EURC' : 'USDC') + ")"}
+                      <input className="num-input" type="number" placeholder={"Amount (" + (((m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1')) ? 'EURC' : 'USDC') + ")"}
                         value={betAmt} onChange={e => { setBetAmt(e.target.value); setBuySel(null); opts.forEach((_,oi)=>{fetchPayoutEst(mId,oi,e.target.value);}); }} />
-                      <button className="max-btn" onClick={()=>{const b=mTok===1?Number(eurcBal||10):Number(usdcBal);setBetAmt(b>0?b.toFixed(2):'10');}}>MAX</button>
+                      <button className="max-btn" onClick={()=>{const isEurc=(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1');const b=isEurc?Number(eurcBal||10):Number(usdcBal);setBetAmt(b>0?b.toFixed(2):'10');}}>MAX</button>
                     </div>
                     <div style={{fontSize:'.7rem',color:'#888',marginBottom:6}}>Click outcome to select</div>
                     <div className={`bet-opts-grid${multi&&opts.length>3?' bet-opts-scroll':''}`}>
