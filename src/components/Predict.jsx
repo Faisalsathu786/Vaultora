@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { ethers } from 'ethers';
 import PredictLeaderboard from './PredictLeaderboard.jsx';
 
