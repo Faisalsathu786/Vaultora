@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI, ERC20_ABI } from '../constants/contracts.js';
 
@@ -252,10 +252,9 @@ export function useV3PredictionData(wallet, getSigner) {
   };
 
   const createMarket = async () => {
-    if (creating || !newMkt.question?.trim() || !V3_ADDRESS) {
+    if (!newMkt.question?.trim() || !V3_ADDRESS) {
       if (!newMkt.question?.trim()) setMsg('Enter a question');
       else if (!V3_ADDRESS) setMsg('Contract missing');
-      setCreating(false);
       return false;
     }
     setCreating(true);
