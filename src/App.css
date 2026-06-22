@@ -3,20 +3,23 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Dark mode — soft dark, easy on eyes (not pure black) */
-  --bg:       #0f0f10;
-  --surf:     #181819;
-  --surf2:    #1e1e20;
-  --line:     rgba(255,255,255,0.07);
-  --line2:    rgba(255,255,255,0.13);
-  --purple:   #b8a9ff;
-  --green:    #4ade80;
+  --bg:       #130816;
+  --surf:     #1a0f1e;
+  --surf2:    #221527;
+  --line:     rgba(255,255,255,0.06);
+  --line2:    rgba(255,255,255,0.12);
+  --clr:      #d745ff;
+  --purple:   #d745ff;
+  --accent:   #d745ff;
+  --green:    #34d399;
   --gold:     #fbbf24;
-  --text:     #e8e8ea;
-  --sub:      #a0a0b0;
-  --dim:      #6b6b80;
-  --r:        14px;
-  --r2:       8px;
+  --red:      #f87171;
+  --text:     #e8e8f0;
+  --sub:      #9a9aae;
+  --dim:      #6a6a80;
+  --card-bg:  #1a0f1e;
+  --r:        12px;
+  --r2:       6px;
 }
 
 [data-theme="light"] {
@@ -82,22 +85,23 @@ body {
     border-top: none;
     border-bottom: 1px solid var(--line);
     background: var(--surf);
-    padding: 0 48px;
+    padding: 0 32px;
     display: flex;
     flex-direction: row;
     justify-content: flex-start;
-    gap: 2px;
+    gap: 4px;
     bottom: unset; left: unset; right: unset;
-    height: 50px;
+    height: 48px;
     align-items: center;
     border-radius: 0;
+    overflow-x: auto;
   }
   .nav-item {
     flex: none;
-    padding: 8px 24px;
-    font-size: .88rem;
-    border-radius: var(--r2);
-    height: 36px;
+    padding: 6px 20px;
+    font-size: .85rem;
+    border-radius: 20px;
+    height: 32px;
     display: flex;
     align-items: center;
   }
@@ -114,11 +118,11 @@ body {
 
   /* ─ Cards ─ */
   .card {
-    padding: 26px 30px;
-    margin-bottom: 20px;
-    border-radius: 16px;
+    padding: 22px 26px;
+    margin-bottom: 18px;
+    border-radius: 14px;
   }
-  .card-lbl { font-size: .78rem; margin-bottom: 16px; }
+  .card-lbl { font-size: .78rem; margin-bottom: 14px; color: var(--sub); }
 
   /* ─ KPI grid ─ */
   .kpi-grid {
