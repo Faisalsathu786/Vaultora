@@ -443,8 +443,9 @@ export default function Predict({
                           <div className="sp-row sp-total">{(()=>{const b=Number(betAmt),e=est?Number(est):0,p=b>0&&e>0?((e/b-1)*100).toFixed(1):'—';return(<><span>Potential Return</span><span style={{color:'var(--clr, #34d399)'}}>{e>0 ? `$${e.toFixed(2)} (${p}%)` : 'calculating...'}</span></>);})()}</div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
-                              const ok = await buyTokens(mId, oi, tokenIdx);
-                              if(ok){notify('Bought!','success');setBuySel(null);setBetAmt('');fetchMarkets();if(supabaseData?.syncTrade) supabaseData.syncTrade('buy',mId,oi,betAmt,'0');if(syncBet&&wallet) syncBet(mId,wallet,oi,betAmt,Date.now(),'');}
+                              const mTok = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 1 : 0;
+                              const ok = await buyTokens(mId, oi, mTok);
+                              if(ok){notify('Bought!','success');setBuySel(null);setBetAmt('');fetchMarkets();if(supabaseData?.syncTrade) supabaseData.syncTrade('buy',mId,oi,betAmt,mTok===1?'EURC':'USDC');if(syncBet&&wallet) syncBet(mId,wallet,oi,betAmt,Date.now(),'');}
                               else notify('Buy failed','error');
                             }}>Confirm Buy</button>
                         </div>
