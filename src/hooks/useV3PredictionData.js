@@ -116,7 +116,7 @@ export function useV3PredictionData(wallet, getSigner) {
           const provider = getProvider();
           const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
           const latestBlock = await provider.getBlockNumber();
-          const fromBlock = Math.max(0, latestBlock - 50000);
+          const fromBlock = Math.max(0, latestBlock - 9999);
 
           const buyFilter = pm.filters.Bought(null, wallet);
           const sellFilter = pm.filters.Sold(null, wallet);

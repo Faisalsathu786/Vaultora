@@ -164,7 +164,7 @@ export default function Predict({
       )}
 
       {marketTab === 'leaderboard' ? (
-        <PredictLeaderboard wallet={wallet} />
+        <PredictLeaderboard wallet={wallet} supabaseLbData={supabaseLbData || []} supabase={supabase || null} />
       ) : marketTab === 'portfolio' ? (
         wallet && positions && Object.keys(positions).length > 0 ? (() => {
           const activePos = []; const pendingPos = []; const settledPos = [];

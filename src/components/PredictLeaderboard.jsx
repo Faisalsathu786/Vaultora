@@ -18,7 +18,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
 
       // Query recent events (last 50000 blocks, don't scan from 0)
       const latestBlock = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, latestBlock - 50000);
+      const fromBlock = Math.max(0, latestBlock - 9999);
       
       const userMap = {};
       
