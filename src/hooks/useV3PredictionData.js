@@ -283,8 +283,9 @@ export function useV3PredictionData(wallet, getSigner) {
     } catch (e) {
       console.error('Create error:', e?.reason || e?.shortMessage || e?.message || e);
       setMsg((e?.reason || e?.shortMessage || e?.message || 'Failed').slice(0, 60));
+      setCreating(false);
       return false;
-    } finally { setTimeout(() => setCreating(false), 500); }
+    } finally { setCreating(false); }
   };
 
   const resolveMarket = async (marketId, outcome) => {
