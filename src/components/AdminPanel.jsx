@@ -280,7 +280,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           </div>
         </div>
 
-        {btn("Design","Save All Settings", c => {
+        {Btn("Design","Save All Settings", c => {
           const design = {...dsgn};
           // Encode design as JSON inside brandDescription
           const json = JSON.stringify(design);
