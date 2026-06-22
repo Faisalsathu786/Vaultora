@@ -15,7 +15,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [setImg, setSetImg] = useState({ id: '', url: '' });
   const [cfg, setCfg] = useState({ buyFee: '', sellFee: '', disputeBond: '', disputeWindow: '', minDur: '', maxDur: '' });
   const [brand, setBrand] = useState({ logo: '', name: '', desc: '' });
-  const [dsgn, setDsgn] = useState({ bg: '', primary: '', accent: '', cardBg: '', theme: 'dark' });
+  const [dsgn, setDsgn] = useState({ bg: '', primary: '', accent: '', cardBg: '', theme: 'dark', mktImgW: '', mktImgH: '' });
   const [eurcRate, setEurcRate] = useState('');
   const [accFees, setAccFees] = useState({ usdc: '0', eurc: '0' });
 
@@ -280,7 +280,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
           </div>
         </div>
 
-        {Btn("Design","Save All Settings", c => {
+        {Btn({title:"Design", label:"Save All Settings", cb: c => {
           const design = {...dsgn};
           // Encode design as JSON inside brandDescription
           const json = JSON.stringify(design);
