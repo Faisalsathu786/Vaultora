@@ -64,7 +64,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       const signer = await getSigner();
       await cb(new ethers.Contract(V3_ADDRESS, V3_ABI, signer));
       setMsg(title + ' done');
-      if (typeof fetchMarkets === 'function') fetchMarkets();
+      if (typeof fetchMarkets === 'function') await fetchMarkets();
     } catch(e) { setMsg(title + ' failed: ' + (e.reason || e.message).slice(0, 80)); }
     setLoading(false);
   };
