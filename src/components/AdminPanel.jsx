@@ -72,6 +72,33 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
     setLoading(false);
   };
 
+  const handleUpgradeV6 = async () => {
+    if (!window.ethereum) { setMsg('MetaMask required'); return; }
+    setUpgrading(true); setUpgradeStatus('Deploying V6 implementation...');
+    try {
+      const signer = await getSigner();
+      const addr = await signer.getAddress();
+      const px = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
+      const owner = await px.owner();
+      if (owner.toLowerCase() !== addr.toLowerCase()) { setMsg('Only owner can upgrade'); setUpgrading(false); return; }
+      const factory = new ethers.ContractFactory(V6_ABI, V6_BYTECODE, signer);
+      const impl = await factory.deploy();
+      setUpgradeStatus('Waiting for deployment...');
+      await impl.waitForDeployment();
+      const implAddr = await impl.getAddress();
+      setUpgradeStatus('Deployed! Upgrading proxy...');
+      const pg = new ethers.Contract(V3_ADDRESS, ['function upgradeToAndCall(address,bytes)'], signer);
+      const tx = await pg.upgradeToAndCall(implAddr, '0x');
+      await tx.wait();
+      setUpgradeStatus('Upgraded! V6 active.');
+      setMsg('V6 upgraded: ' + implAddr);
+      if (typeof fetchMarkets === 'function') await fetchMarkets();
+    } catch(e) {
+      setUpgradeStatus('Failed: ' + (e.reason || e.message).slice(0,60));
+      setMsg('Upgrade failed: ' + (e.reason || e.message).slice(0,80));
+    } finally { setUpgrading(false); }
+  };
+
   const Btn = ({title, label, cb, color, big}) => (
     <button className={big ? "btn-primary" : "cm-toggle"}
       style={{fontSize:big?'.7rem':'.6rem',padding:big?'6px 16px':'3px 8px',margin:2, background:color||''}}
