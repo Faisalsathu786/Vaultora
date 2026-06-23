@@ -201,12 +201,22 @@ export function useV3PredictionData(wallet, getSigner) {
   const fetchPayoutEst = useCallback(async (marketId, outcome, amount) => {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
-      const c = v3();
-      if (!wallet) return;
-      const ret = await c.estimatePayout(marketId, wallet);
-      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(Number(ret) / 1e6) }));
+      const m = marketsRef.find(x => x.id === marketId);
+      if (!m || !m.pools || !m.totalPool) return;
+      const pool = Number(m.pools[outcome] || 0);
+      const tp = Number(m.totalPool || 0);
+      if (pool <= 0 || tp <= 0) { setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: '0'})); return; }
+      const bet = Number(amount) * 1e6;  // to USDC decimals
+      const newPool = pool + bet;
+      const ratio = bet / newPool;
+      const estPayout = ratio * (tp + bet);
+      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(estPayout / 1e6) }));
     } catch (e) { /* ignore */ }
-  }, [v3]);
+  }, []);
+
+  // Keep a ref of latest markets for fetchPayoutEst
+  const marketsRef = useRef(markets);
+  marketsRef.current = markets;
 
   const PAYMENT_TOKENS = [
     { addr: USDC, name: 'USDC', decimals: 6 },
