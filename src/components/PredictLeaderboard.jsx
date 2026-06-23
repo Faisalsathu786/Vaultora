@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
 import { trimAddr } from '../utils/format.js';
@@ -6,105 +6,96 @@ import { trimAddr } from '../utils/format.js';
 const RPC = 'https://rpc.testnet.arc.network';
 
 export default function PredictLeaderboard({ wallet, supabaseLbData, supabase }) {
-  const [traders, setTraders] = useState([]);
-  const [top100, setTop100] = useState([]);
+  const [topUsers, setTopUsers] = useState([]);
   const [userRank, setUserRank] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const fetchAllUsers = async () => {
-    if (!V3_ADDRESS) { setTraders([]); setTop100([]); return; }
+  useEffect(() => {
+    fetchData();
+  }, [wallet, supabaseLbData]);
+
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const provider = new ethers.JsonRpcProvider(RPC);
-      const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
+      const all = [];
 
-      // Query recent events (last 50000 blocks, don't scan from 0)
-      const latestBlock = await provider.getBlockNumber();
-      const fromBlock = Math.max(0, latestBlock - 9999);
-      
-      const userMap = {};
-      
-      const buyFilter = pm.filters.Bought();
-      const sellFilter = pm.filters.Sold();
-      const [buyEvents, sellEvents] = await Promise.all([
-        pm.queryFilter(buyFilter, fromBlock, 'latest'),
-        pm.queryFilter(sellFilter, fromBlock, 'latest'),
-      ]);
-
-      for (const e of [...buyEvents, ...sellEvents]) {
-        const addr = e.args.buyer?.toLowerCase() || e.args.seller?.toLowerCase() || e.args.claimant?.toLowerCase() || "";
-        const usdcAmt = Number(ethers.formatUnits(e.args.amount || e.args.grossReturn || e.args.netReturn || 0, 6));
-        const mktId = Number(e.args.marketId || e.args.id || 0);
-        if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
-        userMap[addr].totalBets += 1;
-        userMap[addr].staked += usdcAmt;
-        userMap[addr].markets.add(mktId);
-      }
-
-      // Query Claimed events
-      const claimFilter = pm.filters.Claimed();
-      const claimEvents = await pm.queryFilter(claimFilter, fromBlock, 'latest');
-      for (const e of claimEvents) {
-        const addr = e.args.buyer?.toLowerCase() || e.args.seller?.toLowerCase() || e.args.claimant?.toLowerCase() || "";
-        if (!userMap[addr]) userMap[addr] = { totalBets: 0, staked: 0, markets: new Set() };
-      }
+      // 1. Supabase data (primary source)
       if (supabaseLbData && supabaseLbData.length > 0) {
         for (const sb of supabaseLbData) {
-          const addr = sb.user_address?.toLowerCase();
-          if (addr && userMap[addr]) {
-            // Use supabase for more accurate stats
-            userMap[addr].staked = Math.max(userMap[addr].staked, Number(sb.total_staked || 0) / 1e6);
-            userMap[addr].totalBets = Math.max(userMap[addr].totalBets, Number(sb.total_bets || 0));
-          } else if (addr && Number(sb.total_bets || 0) > 0) {
-            userMap[addr] = { 
-              totalBets: Number(sb.total_bets || 0), 
-              staked: Number(sb.total_staked || 0) / 1e6, 
-              markets: new Set() 
-            };
-          }
+          all.push({
+            address: sb.user_address?.toLowerCase(),
+            totalBets: Number(sb.total_bets || 0),
+            totalStaked: Number(sb.total_staked || 0) / 1e6,
+            marketsCount: 0,
+            source: 'supabase',
+          });
         }
       }
 
-      // Convert to array and sort
-      const allTraders = Object.entries(userMap)
-        .filter(([, d]) => d.totalBets > 0)
-        .map(([addr, d]) => ({
-          address: addr,
-          totalBets: d.totalBets,
-          totalStaked: d.staked,
-          marketsCount: d.markets.size,
-        }))
-        .sort((a, b) => b.totalStaked - a.totalStaked);
-
-      setTraders(allTraders);
-      setTop100(allTraders.slice(0, 100));
-      // Find current user rank
-      const userIdx = allTraders.findIndex(t => t.address === wallet?.toLowerCase());
-      if (userIdx >= 0) {
-        setUserRank({ rank: userIdx + 1, ...allTraders[userIdx] });
-      } else {
-        setUserRank(null);
+      // 2. On-chain: scan user positions using getUserHistory
+      if (wallet && V3_ADDRESS) {
+        try {
+          const provider = new ethers.JsonRpcProvider(RPC);
+          const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
+          const marketsParticipated = await pm.getUserHistory(wallet);
+          let userTotalStaked = 0;
+          for (const mktId of marketsParticipated) {
+            try {
+              const [tokens, balances] = await pm.getUserPosition(mktId, wallet);
+              for (let i = 0; i < balances.length; i++) {
+                const bal = Number(balances[i]);
+                if (bal > 0) {
+                  // Get pool to estimate staked value
+                  const infos = await pm.getOutcomeInfos(mktId);
+                  if (infos[i]) {
+                    const pool = Number(infos[i].pool || 0n);
+                    const sup = Number(infos[i].supply || 0n);
+                    if (sup > 0 && pool > 0) {
+                      userTotalStaked += (bal / sup) * pool / 1e6;
+                    }
+                  }
+                }
+              }
+            } catch(e) {}
+          }
+          if (userTotalStaked > 0) {
+            const addr = wallet.toLowerCase();
+            const exists = all.find(u => u.address === addr);
+            if (exists) {
+              exists.totalStaked = Math.max(exists.totalStaked, userTotalStaked);
+            } else {
+              all.push({ address: addr, totalBets: Number(marketsParticipated.length), totalStaked: userTotalStaked, marketsCount: Number(marketsParticipated.length), source: 'onchain' });
+            }
+          }
+        } catch(e) { console.warn('On-chain user scan error:', e); }
       }
-    } catch (e) {
-      console.error('PredictLeaderboard error:', e);
+
+      // Sort by staked
+      all.sort((a, b) => b.totalStaked - a.totalStaked);
+      setTopUsers(all);
+
+      // Find current user rank
+      if (wallet) {
+        const idx = all.findIndex(u => u.address === wallet.toLowerCase());
+        if (idx >= 0) setUserRank({ rank: idx + 1, ...all[idx] });
+        else setUserRank(null);
+      } else { setUserRank(null); }
+    } catch(e) {
+      console.error('Leaderboard error:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Initial load + periodic refresh
-  useEffect(() => {
-    fetchAllUsers();
-    const interval = setInterval(fetchAllUsers, 10000); // refresh every 10s
-    return () => clearInterval(interval);
-  }, [wallet]);
-
-  // Re-fetch when supabase data changes
-  useEffect(() => {
-    if (supabaseLbData?.length > 0) fetchAllUsers();
-  }, [supabaseLbData]);
-
   const formatVol = (v) => {
-    if (v < 0.01) return '$0';
+    if (!v || v < 0.01) return '$0';
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}K`;
     return `$${v.toFixed(2)}`;
   };
+
+  if (loading) {
+    return <div className="card" style={{ marginTop: 12 }}><p className="card-lbl">Leaderboard</p><p className="empty">Loading...</p></div>;
+  }
 
   return (
     <div className="card" style={{ marginTop: 12 }}>
@@ -115,13 +106,16 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
           <span className="lb-live-text">Live</span>
         </div>
       </div>
-      {traders.length === 0 ? (
-        <p className="empty">No trades yet. Place a bet to appear!</p>
+      {topUsers.length === 0 ? (
+        <div>
+          <p className="empty">No traders yet. Place a bet to appear!</p>
+          {wallet && <p className="empty" style={{fontSize:'.65rem',color:'#888',marginTop:4}}>Tip: Set up Supabase to enable full leaderboard with all traders.</p>}
+        </div>
       ) : (
         <>
           {/* Podium — top 3 */}
           <div className="lb-podium">
-            {traders.slice(0, 3).map((u, idx) => (
+            {topUsers.slice(0, 3).map((u, idx) => (
               <div key={u.address} className={`lb-podium-card ${['gold','silver','bronze'][idx]}`}>
                 <div className="lb-podium-rank">{['🥇','🥈','🥉'][idx]}</div>
                 <div className="lb-podium-addr">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</div>
@@ -130,12 +124,12 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </div>
             ))}
           </div>
-          {/* Table — top 100 */}
+          {/* Table — all users */}
           <div className="lb-table-wrap">
             <table className="lb-table">
               <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>Bets</th><th>Markets</th></tr></thead>
               <tbody>
-                {top100.map((u, idx) => (
+                {topUsers.map((u, idx) => (
                   <tr key={u.address} className={u.address === wallet?.toLowerCase() ? 'is-you' : ''}>
                     <td className="lb-rank">{idx + 1}</td>
                     <td className="lb-trader">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</td>
@@ -147,27 +141,14 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </tbody>
             </table>
           </div>
-
-          {/* Your rank (if outside top 100) */}
-          {userRank && userRank.rank > 100 && (
+          {/* Your rank if not in list */}
+          {userRank && userRank.rank > topUsers.length && (
             <div className="your-rank-card">
               <div className="your-rank-label">Your Rank</div>
               <div className="your-rank-row">
                 <span className="your-rank-num">#{userRank.rank}</span>
                 <span className="your-rank-val">Vol: {formatVol(userRank.totalStaked)}</span>
-                <span className="your-rank-val">{userRank.totalBets} bets · {userRank.marketsCount}m</span>
-              </div>
-              <div className="your-rank-hint">You need ~${formatVol(top100[99]?.totalStaked || 0)} volume to enter top 100</div>
-            </div>
-          )}
-          {/* If in top 100, show small 'You' label */}
-          {userRank && userRank.rank <= 100 && (
-            <div className="your-rank-card" style={{marginTop:4}}>
-              <div className="your-rank-row" style={{justifyContent:'center',gap:8}}>
-                <span>👤 You</span>
-                <span>#{userRank.rank}</span>
-                <span>Vol: {formatVol(userRank.totalStaked)}</span>
-                <span>{userRank.totalBets}b · {userRank.marketsCount}m</span>
+                <span className="your-rank-val">{userRank.totalBets} bets</span>
               </div>
             </div>
           )}
