@@ -41,7 +41,7 @@ export default function Predict({
       setNewMkt(p => ({ ...p, imageUrl: c.toDataURL('image/jpeg', 0.7) }));
     };
     const reader = new FileReader();
-    reader.onload = () => { const img2 = new Image(); img2.src = reader.result; };
+    reader.onload = () => { img.src = reader.result; };
     reader.readAsDataURL(file);
   };
 
