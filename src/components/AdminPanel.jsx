@@ -92,10 +92,20 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       setUpgradeStatus('Step 1 done: V6 deployed at ' + implAddr.slice(0,12) + '...');
 
       // Step 2: Upgrade proxy
-      setUpgradeStatus('Step 2/2: Upgrading proxy... confirm MetaMask');
-      const pg = new ethers.Contract(V3_ADDRESS, ['function upgradeToAndCall(address,bytes)'], signer);
-      const tx = await pg.upgradeToAndCall(implAddr, '0x');
-      setUpgradeStatus('Upgrade tx sent, waiting...');
+      setUpgradeStatus('Step 2/2: Testing upgrade via staticCall...');
+      const pg = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
+      // Test the upgrade with staticCall first
+      try {
+        await pg.upgradeToAndCall.staticCall(implAddr, '0x', { gasLimit: 1000000 });
+      } catch(e2) {
+        setUpgradeStatus('Upgrade test failed: ' + (e2.reason || e2.message || '').slice(0,80));
+        setMsg('Upgrade failed: ' + (e2.reason || e2.message || '').slice(0,100));
+        setUpgrading(false);
+        return;
+      }
+      setUpgradeStatus('Step 2/2: Upgrading proxy... send tx');
+      const tx = await pg.upgradeToAndCall(implAddr, '0x', { gasLimit: 1000000 });
+      setUpgradeStatus('Upgrade tx sent (' + tx.hash.slice(0,16) + '...), waiting...');
       await tx.wait();
       setUpgradeStatus('DONE! V6 active.');
       setMsg('V6 upgraded successfully!');
