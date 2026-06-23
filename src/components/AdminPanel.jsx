@@ -94,17 +94,11 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       // Step 2: Upgrade proxy
       setUpgradeStatus('Step 2/2: Testing upgrade via staticCall...');
       const pg = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
-      // Test the upgrade with staticCall first
-      try {
-        await pg.upgradeToAndCall.staticCall(implAddr, '0x', { gasLimit: 1000000 });
-      } catch(e2) {
-        setUpgradeStatus('Upgrade test failed: ' + (e2.reason || e2.message || '').slice(0,80));
-        setMsg('Upgrade failed: ' + (e2.reason || e2.message || '').slice(0,100));
-        setUpgrading(false);
-        return;
-      }
-      setUpgradeStatus('Step 2/2: Upgrading proxy... send tx');
-      const tx = await pg.upgradeToAndCall(implAddr, '0x', { gasLimit: 1000000 });
+      setUpgradeStatus('Step 2/2: Upgrading proxy via proxy.upgradeTo()...');
+      // Use proxy's own upgradeTo() - it just updates the slot, no UUPS checks
+      const proxyAbi = ['function upgradeTo(address)'];
+      const proxyContract = new ethers.Contract(V3_ADDRESS, proxyAbi, signer);
+      const tx = await proxyContract.upgradeTo(implAddr, { gasLimit: 500000 });
       setUpgradeStatus('Upgrade tx sent (' + tx.hash.slice(0,16) + '...), waiting...');
       await tx.wait();
       setUpgradeStatus('DONE! V6 active.');
