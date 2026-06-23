@@ -496,7 +496,13 @@ else activePos.push(entry);
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row sp-total">{(()=>{const b=Number(betAmt),e=est?Number(est):0,p=b>0&&e>0?((e/b-1)*100).toFixed(1):'—';return(<><span>Potential Return</span><span style={{color:'var(--clr, #34d399)'}}>{e>0 ? `~$${e.toFixed(2)} (est.)` : 'calculating...'}</span></>);})()}</div>
+                          <div className="sp-row sp-total">{(()=>{
+  const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
+  const op=Number(m.pools?.[buySel]||0);const tp=Number(m.totalPool||0);
+  if(op<=0||tp<=0)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
+  const po=bb*(tp/op);const pc=((po/bb-1)*100).toFixed(1);
+  return<><span>Potential Return</span><span style={{color:'var(--clr,#34d399)'}}>~${po.toFixed(2)} ({pc}%)</span></>;
+})()}</div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
                             onClick={async () => {
                               const mTok = (m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 1 : 0;
