@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI, ERC20_ABI } from '../constants/contracts.js';
 
