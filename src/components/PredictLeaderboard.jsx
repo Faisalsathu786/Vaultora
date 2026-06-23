@@ -10,82 +10,82 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
   const [userRank, setUserRank] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchData();
-  }, [wallet, supabaseLbData]);
-
-  const fetchData = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
       const all = [];
 
-      // 1. Supabase data (primary source)
+      // 1. On-chain getTopTraders (V6 contract)
+      if (V3_ADDRESS) {
+        try {
+          const provider = new ethers.JsonRpcProvider(RPC);
+          const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
+          if (typeof pm.getTopTraders === 'function') {
+            const [addrs, vols] = await pm.getTopTraders(100);
+            for (let i = 0; i < addrs.length; i++) {
+              const ua = addrs[i].toLowerCase();
+              const stats = await pm.getUserStats(ua).catch(() => [0,0,0,0,0]);
+              all.push({ address: ua, totalVolume: Number(vols[i]) / 1e6, totalBets: Number(stats[4] || 0), wins: Number(stats[1] || 0), losses: Number(stats[2] || 0), marketsCount: Number(stats[4] || 0), source: 'v6' });
+            }
+          }
+        } catch(e) { console.warn('getTopTraders not available:', e.message); }
+      }
+
+      // 2. Supabase data (fallback)
       if (supabaseLbData && supabaseLbData.length > 0) {
         for (const sb of supabaseLbData) {
-          all.push({
-            address: sb.user_address?.toLowerCase(),
-            totalBets: Number(sb.total_bets || 0),
-            totalStaked: Number(sb.total_staked || 0) / 1e6,
-            marketsCount: 0,
-            source: 'supabase',
-          });
+          const addr = sb.user_address?.toLowerCase();
+          if (!all.find(u => u.address === addr)) {
+            all.push({ address: addr, totalVolume: Number(sb.total_staked || 0) / 1e6, totalBets: Number(sb.total_bets || 0), wins: Number(sb.wins || 0), losses: Number(sb.losses || 0), marketsCount: 0, source: 'supabase' });
+          }
         }
       }
 
-      // 2. On-chain: scan user positions using getUserHistory
-      if (wallet && V3_ADDRESS) {
+      // 3. On-chain getUserHistory (fallback for current user)
+      if (wallet) {
         try {
           const provider = new ethers.JsonRpcProvider(RPC);
           const pm = new ethers.Contract(V3_ADDRESS, V3_ABI, provider);
           const marketsParticipated = await pm.getUserHistory(wallet);
-          let userTotalStaked = 0;
+          let userTotalV = 0;
           for (const mktId of marketsParticipated) {
             try {
-              const [tokens, balances] = await pm.getUserPosition(mktId, wallet);
+              const [, balances] = await pm.getUserPosition(mktId, wallet);
               for (let i = 0; i < balances.length; i++) {
                 const bal = Number(balances[i]);
                 if (bal > 0) {
-                  // Get pool to estimate staked value
                   const infos = await pm.getOutcomeInfos(mktId);
                   if (infos[i]) {
                     const pool = Number(infos[i].pool || 0n);
                     const sup = Number(infos[i].supply || 0n);
-                    if (sup > 0 && pool > 0) {
-                      userTotalStaked += (bal / sup) * pool / 1e6;
-                    }
+                    if (sup > 0 && pool > 0) userTotalV += (bal / sup) * pool / 1e6;
                   }
                 }
               }
             } catch(e) {}
           }
-          if (userTotalStaked > 0) {
+          if (userTotalV > 0) {
             const addr = wallet.toLowerCase();
             const exists = all.find(u => u.address === addr);
-            if (exists) {
-              exists.totalStaked = Math.max(exists.totalStaked, userTotalStaked);
-            } else {
-              all.push({ address: addr, totalBets: Number(marketsParticipated.length), totalStaked: userTotalStaked, marketsCount: Number(marketsParticipated.length), source: 'onchain' });
-            }
+            if (exists) exists.totalVolume = Math.max(exists.totalVolume, userTotalV);
+            else all.push({ address: addr, totalVolume: userTotalV, totalBets: Number(marketsParticipated.length), wins: 0, losses: 0, marketsCount: Number(marketsParticipated.length), source: 'onchain' });
           }
-        } catch(e) { console.warn('On-chain user scan error:', e); }
+        } catch(e) { console.warn('on-chain fallback error:', e); }
       }
 
-      // Sort by staked
-      all.sort((a, b) => b.totalStaked - a.totalStaked);
+      all.sort((a, b) => b.totalVolume - a.totalVolume);
       setTopUsers(all);
-
-      // Find current user rank
       if (wallet) {
         const idx = all.findIndex(u => u.address === wallet.toLowerCase());
-        if (idx >= 0) setUserRank({ rank: idx + 1, ...all[idx] });
-        else setUserRank(null);
+        setUserRank(idx >= 0 ? { rank: idx + 1, ...all[idx] } : null);
       } else { setUserRank(null); }
-    } catch(e) {
-      console.error('Leaderboard error:', e);
-    } finally {
-      setLoading(false);
-    }
+    } catch(e) { console.error('Leaderboard error:', e); }
+    finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    fetchAll();
+  }, [wallet, supabaseLbData]);;
 
   const formatVol = (v) => {
     if (!v || v < 0.01) return '$0';
@@ -119,7 +119,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               <div key={u.address} className={`lb-podium-card ${['gold','silver','bronze'][idx]}`}>
                 <div className="lb-podium-rank">{['🥇','🥈','🥉'][idx]}</div>
                 <div className="lb-podium-addr">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</div>
-                <div className="lb-podium-vol">Vol: {formatVol(u.totalStaked)}</div>
+                <div className="lb-podium-vol">Vol: {formatVol(u.totalVolume)}</div>
                 <div className="lb-podium-vol" style={{fontSize:'.65rem',color:'#888'}}>{u.totalBets} bets · {u.marketsCount}m</div>
               </div>
             ))}
@@ -133,7 +133,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
                   <tr key={u.address} className={u.address === wallet?.toLowerCase() ? 'is-you' : ''}>
                     <td className="lb-rank">{idx + 1}</td>
                     <td className="lb-trader">{u.address === wallet?.toLowerCase() ? '👤 You' : trimAddr(u.address)}</td>
-                    <td className="lb-num">{formatVol(u.totalStaked)}</td>
+                    <td className="lb-num">{formatVol(u.totalVolume)}</td>
                     <td className="lb-num">{u.totalBets}</td>
                     <td className="lb-num">{u.marketsCount}</td>
                   </tr>
@@ -147,7 +147,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               <div className="your-rank-label">Your Rank</div>
               <div className="your-rank-row">
                 <span className="your-rank-num">#{userRank.rank}</span>
-                <span className="your-rank-val">Vol: {formatVol(userRank.totalStaked)}</span>
+                <span className="your-rank-val">Vol: {formatVol(userRank.totalVolume)}</span>
                 <span className="your-rank-val">{userRank.totalBets} bets</span>
               </div>
             </div>
