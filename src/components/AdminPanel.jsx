@@ -82,7 +82,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       const owner = await px.owner();
       if (owner.toLowerCase() !== addr.toLowerCase()) { setMsg('Only owner can upgrade'); setUpgrading(false); return; }
       const factory = new ethers.ContractFactory(V6_ABI, V6_BYTECODE, signer);
-      const impl = await factory.deploy();
+      const impl = await factory.deploy({ gasLimit: 5000000 });
       setUpgradeStatus('Waiting for deployment...');
       await impl.waitForDeployment();
       const implAddr = await impl.getAddress();
