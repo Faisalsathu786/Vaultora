@@ -287,7 +287,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
             <p style={{fontSize:'.75rem',color:'#888',marginBottom:8}}>Adds getTopTraders, getUserTxHistory, on-chain leaderboard</p>
             <p style={{fontSize:'.65rem',color:'#666',marginBottom:12}}>Proxy: {V3_ADDRESS}</p>
             <button className="btn-primary" onClick={handleUpgradeV6} disabled={upgrading}
-              style={upgrading?{{opacity:.6}}:{}}>
+              style={upgrading ? { opacity: 0.6 } : {}}>
               {upgrading ? 'Deploying...' : 'Upgrade to V6'}
             </button>
             {upgradeStatus && <p style={{fontSize:'.7rem',color:'#60a5fa',marginTop:8}}>{upgradeStatus}</p>}
