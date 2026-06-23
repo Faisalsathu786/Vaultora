@@ -206,11 +206,10 @@ export function useV3PredictionData(wallet, getSigner) {
       const pool = Number(m.pools[outcome] || 0);
       const tp = Number(m.totalPool || 0);
       if (pool <= 0 || tp <= 0) { setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: '0'})); return; }
-      const bet = Number(amount) * 1e6;  // to USDC decimals
-      const newPool = pool + bet;
-      const ratio = bet / newPool;
-      const estPayout = ratio * (tp + bet);
-      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(estPayout / 1e6) }));
+      // Use pool ratio: pool[O] / totalPool is the implied probability
+      // Payout for $bet on outcome O = bet / (pool/totalPool) = bet * totalPool / pool
+      const estPayout = Number(amount) * (tp / pool);
+      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(estPayout > 0 ? estPayout : 0) }));
     } catch (e) { /* ignore */ }
   }, []);
 
