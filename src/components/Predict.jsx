@@ -498,7 +498,7 @@ else activePos.push(entry);
                           <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row sp-total">{(()=>{
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
-  const op=Number(m.pools?.[buySel]||0);const tp=Number(m.totalPool||0);
+  const op=Number(m.pools?.[oi]||0);const tp=Number(m.totalPool||0);
   if(op<=0||tp<=0)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
   const po=bb*(tp/op);const pc=((po/bb-1)*100).toFixed(1);
   return<><span>Potential Return</span><span style={{color:'var(--clr,#34d399)'}}>~${po.toFixed(2)} ({pc}%)</span></>;
