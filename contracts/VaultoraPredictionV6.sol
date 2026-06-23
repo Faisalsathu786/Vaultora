@@ -982,7 +982,7 @@ contract VaultoraPredictionV6 is
     }
 
     function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal {
-        require(_userTradeHistory[user].length < _maxTradesPerUser);
+        require(_maxTradesPerUser == 0 || _userTradeHistory[user].length < _maxTradesPerUser);
         _userTradeHistory[user].push(TradeRecord(marketId, outcome, amount, block.timestamp, action));
         _userTotalVolume[user] += amount;
         _trackUser(user);
