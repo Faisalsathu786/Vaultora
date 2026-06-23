@@ -21,10 +21,10 @@ contract VaultoraOutcomeToken {
     event Approval(address indexed owner, address indexed spender, uint256 value);
     
     function setData(address _minter, string memory _name, string memory _symbol) external {
-        require(minter == address(0), "VOT: init");
+        require(minter == address(0));
         name = _name;  symbol = _symbol;  minter = _minter;
     }
-    modifier onlyMinter() { require(msg.sender == minter, "VOT: 001"); _; }
+    modifier onlyMinter() { require(msg.sender == minter); _; }
     function mint(address to, uint256 a) external onlyMinter { _mint(to, a); }
     function _mint(address to, uint256 a) internal { balanceOf[to] += a; emit Transfer(address(0), to, a); }
     function burn(address f, uint256 a) external onlyMinter { _burn(f, a); }
@@ -273,8 +273,8 @@ contract VaultoraPredictionV6 is
     /// @param _eurc  EURC token address on Arc Testnet
     function initialize(address _usdc, address _eurc) public initializer {
         _maxTradesPerUser = 500;
-        require(_usdc != address(0), "V6: zero USDC");
-        require(_eurc != address(0), "V6: zero EURC");
+        require(_usdc != address(0));
+        require(_eurc != address(0));
 
         __Ownable_init(msg.sender);
         __Pausable_init();
@@ -318,13 +318,13 @@ contract VaultoraPredictionV6 is
     }
 
     modifier marketExists(uint256 marketId) {
-        require(marketId < marketCount, "V4: market does not exist");
+        require(marketId < marketCount);
         _;
     }
 
     modifier marketOpen(uint256 marketId) {
-        require(block.timestamp < markets[marketId].endTime, "V4: market ended");
-        require(!markets[marketId].resolved, "V4: market resolved");
+        require(block.timestamp < markets[marketId].endTime);
+        require(!markets[marketId].resolved);
         _;
     }
 
@@ -362,17 +362,13 @@ contract VaultoraPredictionV6 is
         string memory imageUrl
     ) internal whenNotPaused returns (uint256 marketId) {
         uint256 n = options.length;
-        require(n >= 2, "V4: need >= 2 options");
-        require(n <= 10, "V4: max 10 options");
-        require(endTime > block.timestamp, "V4: endTime in past");
+        require(n >= 2);
+        require(n <= 10);
+        require(endTime > block.timestamp);
         require(
-            endTime - block.timestamp >= minMarketDuration,
-            "V4: duration too short"
-        );
+            endTime - block.timestamp >= minMarketDuration);
         require(
-            endTime - block.timestamp <= maxMarketDuration,
-            "V4: duration too long"
-        );
+            endTime - block.timestamp <= maxMarketDuration);
 
         marketId = marketCount;
         marketCount = marketId + 1;
@@ -449,9 +445,9 @@ contract VaultoraPredictionV6 is
         uint256 outcome,
         uint256 eurcAmount
     ) external whenNotPaused marketExists(marketId) marketOpen(marketId) {
-        require(paymentTokens[eurcToken], "V4: EURC not accepted");
+        require(paymentTokens[eurcToken]);
         uint256 usdcEquivalent = eurcAmount * eurcRate / 1e6;
-        require(usdcEquivalent > 0, "V4: amount too small");
+        require(usdcEquivalent > 0);
         _buyTokens(marketId, outcome, usdcEquivalent, eurcToken, eurcAmount);
     }
 
@@ -464,7 +460,7 @@ contract VaultoraPredictionV6 is
     ) internal {
         Market storage m = markets[marketId];
         uint256 n = m.options.length;
-        require(outcome < n, "V6:021");
+        require(outcome < n);
 
         uint256 fee = usdcEquivalent * buyFee / 10000;
         uint256 net = usdcEquivalent - fee;
@@ -515,9 +511,9 @@ contract VaultoraPredictionV6 is
     ) external whenNotPaused marketExists(marketId) {
         Market storage m = markets[marketId];
         uint256 n = m.options.length;
-        require(amounts.length == n, "V4: amounts length mismatch");
-        require(!m.finalized, "V4: market finalized");
-        require(!m.resolved, "V4: market resolved");
+        require(amounts.length == n);
+        require(!m.finalized);
+        require(!m.resolved);
 
         uint256 grossReturn = 0;
         uint256 maxSupplyFraction = 0; // for >25% tax
@@ -527,12 +523,10 @@ contract VaultoraPredictionV6 is
             if (amt == 0) continue;
 
             require(
-                positionBalances[marketId][i][msg.sender] >= amt,
-                "V4: insufficient balance"
-            );
+                positionBalances[marketId][i][msg.sender] >= amt);
 
             uint256 supply_i = m.supplies[i];
-            require(supply_i > 0, "V4: zero supply");
+            require(supply_i > 0);
 
             // pool_i * amount_i / supply_i
             uint256 ret = m.pools[i] * amt / supply_i;
@@ -549,7 +543,7 @@ contract VaultoraPredictionV6 is
             VaultoraOutcomeToken(m.outcomeTokens[i]).burn(msg.sender, amt);
         }
 
-        require(grossReturn > 0, "V4: nothing to sell");
+        require(grossReturn > 0);
 
         // -- exit tax --
         uint256 tax = _calculateExitTax(m, grossReturn, maxSupplyFraction);
@@ -605,16 +599,16 @@ contract VaultoraPredictionV6 is
         uint256 marketId
     ) external whenNotPaused marketExists(marketId) {
         Market storage m = markets[marketId];
-        require(m.finalized, "V4: market not finalized");
-        require(!hasClaimed[marketId][msg.sender], "V4: already claimed");
+        require(m.finalized);
+        require(!hasClaimed[marketId][msg.sender]);
 
         uint256 winIdx = m.winningOutcome;
         uint256 userTokens = positionBalances[marketId][winIdx][msg.sender];
-        require(userTokens > 0, "V4: no winning tokens");
+        require(userTokens > 0);
 
         uint256 winPool   = m.pools[winIdx];
         uint256 winSupply = m.supplies[winIdx];
-        require(winSupply > 0, "V4: zero winning supply");
+        require(winSupply > 0);
 
         uint256 payout = userTokens * winPool / winSupply;
 
@@ -640,9 +634,9 @@ contract VaultoraPredictionV6 is
         uint256 winningOutcome
     ) external onlyMarketCreator marketExists(marketId) {
         Market storage m = markets[marketId];
-        require(!m.resolved, "V6: already resolved");
+        require(!m.resolved);
         require(block.timestamp >= m.endTime || hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "V4: market still open");
-        require(winningOutcome < m.options.length, "V6: invalid outcome");
+        require(winningOutcome < m.options.length);
 
         m.resolved        = true;
         m.winningOutcome  = winningOutcome;
@@ -658,17 +652,15 @@ contract VaultoraPredictionV6 is
         uint256 marketId
     ) external whenNotPaused marketExists(marketId) {
         Market storage m = markets[marketId];
-        require(m.resolved, "V4: not resolved");
-        require(!m.finalized, "V4: already finalized");
-        require(!m.disputed, "V4: already disputed");
+        require(m.resolved);
+        require(!m.finalized);
+        require(!m.disputed);
         require(
-            block.timestamp <= m.resolvedAt + disputeWindowDuration,
-            "V4: dispute window closed"
-        );
+            block.timestamp <= m.resolvedAt + disputeWindowDuration);
 
         uint256 totalPool = _totalPoolUsdc(m);
         uint256 bond = totalPool * disputeBondBps / 10000;
-        require(bond > 0, "V4: zero bond");
+        require(bond > 0);
 
         // Collect bond from disputer
         IERC20(usdcToken).transferFrom(msg.sender, address(this), bond);
@@ -689,13 +681,11 @@ contract VaultoraPredictionV6 is
         uint256 marketId
     ) external marketExists(marketId) {
         Market storage m = markets[marketId];
-        require(m.resolved, "V4: not resolved");
-        require(!m.finalized, "V4: already finalized");
-        require(!m.disputed, "V4: disputed - re-resolve first");
+        require(m.resolved);
+        require(!m.finalized);
+        require(!m.disputed);
         require(
-            block.timestamp > m.resolvedAt + disputeWindowDuration,
-            "V4: dispute window still open"
-        );
+            block.timestamp > m.resolvedAt + disputeWindowDuration);
 
         m.finalized = true;
     }
@@ -706,9 +696,9 @@ contract VaultoraPredictionV6 is
         uint256 winningOutcome
     ) external onlyMarketCreator marketExists(marketId) {
         Market storage m = markets[marketId];
-        require(m.disputed, "V4: not disputed");
-        require(!m.finalized, "V4: already finalized");
-        require(winningOutcome < m.options.length, "V6: invalid outcome");
+        require(m.disputed);
+        require(!m.finalized);
+        require(winningOutcome < m.options.length);
 
         m.resolved        = true;
         m.disputed        = false;
@@ -820,7 +810,7 @@ contract VaultoraPredictionV6 is
         returns (uint256 price)
     {
         Market storage m = markets[marketId];
-        require(outcomeIndex < m.options.length, "V4: invalid outcome index");
+        require(outcomeIndex < m.options.length);
 
         uint256 effPool   = m.pools[outcomeIndex] + VIRTUAL_USDC;
         uint256 effSupply = m.supplies[outcomeIndex] + VIRTUAL_TOKENS;
@@ -859,7 +849,7 @@ contract VaultoraPredictionV6 is
 
     /// @notice Set the EURC -> USDC conversion rate.
     function setEurcRate(uint256 _eurcRate) external onlyOwner {
-        require(_eurcRate > 0, "V6: zero rate");
+        require(_eurcRate > 0);
         uint256 old = eurcRate;
         eurcRate = _eurcRate;
         emit EurcRateUpdated(old, _eurcRate);
@@ -867,7 +857,7 @@ contract VaultoraPredictionV6 is
 
     /// @notice Whitelist a new payment token.
     function addPaymentToken(address token) external onlyOwner {
-        require(token != address(0), "V6: zero address");
+        require(token != address(0));
         paymentTokens[token] = true;
     }
 
@@ -899,16 +889,16 @@ contract VaultoraPredictionV6 is
 
     /// @notice Withdraw accumulated fees for a given token.
     function withdrawTokens(address token, uint256 amount) external onlyOwner {
-        require(amount > 0, "V4: zero amount");
-        require(accumulatedFees[token] >= amount, "V4: insufficient fees");
+        require(amount > 0);
+        require(accumulatedFees[token] >= amount);
         accumulatedFees[token] -= amount;
         IERC20(token).transfer(owner(), amount);
     }
 
     /// @notice Update buy and sell fees (basis points, max 10% each).
     function updateFees(uint256 _buyFee, uint256 _sellFee) external onlyOwner {
-        require(_buyFee  <= 1000, "V4: buyFee  > 10%");
-        require(_sellFee <= 1000, "V4: sellFee > 10%");
+        require(_buyFee  <= 1000);
+        require(_sellFee <= 1000);
         buyFee  = _buyFee;
         sellFee = _sellFee;
         emit FeeUpdated(_buyFee, _sellFee);
@@ -921,7 +911,7 @@ contract VaultoraPredictionV6 is
         uint256 _minMarketDuration,
         uint256 _maxMarketDuration
     ) external onlyOwner {
-        require(_disputeBondBps <= 1000, "V4: bond > 10%");
+        require(_disputeBondBps <= 1000);
         disputeBondBps         = _disputeBondBps;
         disputeWindowDuration  = _disputeWindowDuration;
         minMarketDuration      = _minMarketDuration;
@@ -935,8 +925,8 @@ contract VaultoraPredictionV6 is
         marketExists(marketId)
     {
         Market storage m = markets[marketId];
-        require(newEndTime > m.endTime, "V4: must extend forward");
-        require(!m.resolved, "V4: market resolved");
+        require(newEndTime > m.endTime);
+        require(!m.resolved);
         m.endTime = newEndTime;
         emit MarketExtended(marketId, newEndTime);
     }
@@ -992,7 +982,7 @@ contract VaultoraPredictionV6 is
     }
 
     function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal {
-        require(_userTradeHistory[user].length < _maxTradesPerUser, "V6: too many trades");
+        require(_userTradeHistory[user].length < _maxTradesPerUser);
         _userTradeHistory[user].push(TradeRecord(marketId, outcome, amount, block.timestamp, action));
         _userTotalVolume[user] += amount;
         _trackUser(user);
@@ -1058,9 +1048,6 @@ contract VaultoraPredictionV6 is
     }
 
     /// @notice V6: Get total trade records for a user
-    function getUserTxCount(address user) external view returns (uint256) {
-        return _userTradeHistory[user].length;
-    }
 
     /// @notice V6: Get all-time trader stats
     function getUserStats(address user) external view returns (
@@ -1110,15 +1097,7 @@ contract VaultoraPredictionV6 is
     }
 
     /// @notice V6: Admin - scan all existing markets and retro-track users who have positions
-    function retroTrackUsers() external onlyOwner {
-        for (uint256 i = 0; i < marketCount; i++) {
-            Market storage m = markets[i];
-            for (uint256 o = 0; o < m.options.length; o++) {
-                // We can't iterate mapping keys. Push all knowable users via Bought event?
-                // This function is a placeholder - real retro-tracking requires event index
-            }
-        }
-    }
+    
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
         emit Upgraded(newImplementation);
