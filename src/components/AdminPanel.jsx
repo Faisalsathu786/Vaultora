@@ -74,28 +74,36 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
   const handleUpgradeV6 = async () => {
     if (!window.ethereum) { setMsg('MetaMask required'); return; }
-    setUpgrading(true); setUpgradeStatus('Deploying V6 implementation...');
+    setUpgrading(true);
     try {
       const signer = await getSigner();
       const addr = await signer.getAddress();
       const px = new ethers.Contract(V3_ADDRESS, V3_ABI, signer);
       const owner = await px.owner();
       if (owner.toLowerCase() !== addr.toLowerCase()) { setMsg('Only owner can upgrade'); setUpgrading(false); return; }
+
+      // Step 1: Deploy V6 implementation
+      setUpgradeStatus('Step 1/2: Deploying V6 implementation... please confirm MetaMask');
       const factory = new ethers.ContractFactory(V6_ABI, V6_BYTECODE, signer);
-      const impl = await factory.deploy({ gasLimit: 5000000 });
-      setUpgradeStatus('Waiting for deployment...');
+      const impl = await factory.deploy();
+      setUpgradeStatus('Deploy tx sent, waiting for confirmation...');
       await impl.waitForDeployment();
       const implAddr = await impl.getAddress();
-      setUpgradeStatus('Deployed! Upgrading proxy...');
+      setUpgradeStatus('Step 1 done: V6 deployed at ' + implAddr.slice(0,12) + '...');
+
+      // Step 2: Upgrade proxy
+      setUpgradeStatus('Step 2/2: Upgrading proxy... confirm MetaMask');
       const pg = new ethers.Contract(V3_ADDRESS, ['function upgradeToAndCall(address,bytes)'], signer);
       const tx = await pg.upgradeToAndCall(implAddr, '0x');
+      setUpgradeStatus('Upgrade tx sent, waiting...');
       await tx.wait();
-      setUpgradeStatus('Upgraded! V6 active.');
-      setMsg('V6 upgraded: ' + implAddr);
+      setUpgradeStatus('DONE! V6 active.');
+      setMsg('V6 upgraded successfully!');
       if (typeof fetchMarkets === 'function') await fetchMarkets();
     } catch(e) {
-      setUpgradeStatus('Failed: ' + (e.reason || e.message).slice(0,60));
-      setMsg('Upgrade failed: ' + (e.reason || e.message).slice(0,80));
+      const err = e.reason || e.message || String(e);
+      setUpgradeStatus('Failed at: ' + err.slice(0,80));
+      setMsg('Error: ' + err.slice(0,100));
     } finally { setUpgrading(false); }
   };
 
