@@ -85,7 +85,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
       // Step 1: Deploy V6 implementation
       setUpgradeStatus('Step 1/2: Deploying V6 implementation... please confirm MetaMask');
       const factory = new ethers.ContractFactory(V6_ABI, V6_BYTECODE, signer);
-      const impl = await factory.deploy();
+      const impl = await factory.deploy({ gasLimit: 6000000 });
       setUpgradeStatus('Deploy tx sent, waiting for confirmation...');
       await impl.waitForDeployment();
       const implAddr = await impl.getAddress();
