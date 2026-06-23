@@ -444,9 +444,7 @@ else activePos.push(entry);
                             <button className="cm-toggle active"
                               style={{fontSize:'.6rem',padding:'2px 10px',backgroundColor:'rgba(215,69,255,.12)',borderColor:'rgba(215,69,255,.25)',color:'#fff',fontWeight:600}}
                               onClick={()=>{}}>{mTok === 1 ? 'EURC' : 'USDC'}</button>
-                            {mTok === 1 && eurcRate > 0 && (
-                              <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
-                            )}
+
                           </div>
                         );
                       })()
@@ -487,9 +485,7 @@ else activePos.push(entry);
                                 <label className="cm-label">Pay with</label>
                                 <button className="cm-toggle active"
                                   style={{fontSize:'.6rem',padding:'2px 10px',backgroundColor:'rgba(215,69,255,.12)',borderColor:'rgba(215,69,255,.25)',color:'#fff',fontWeight:600}}>{mTok === 1 ? 'EURC' : 'USDC'}</button>
-                                {mTok === 1 && eurcRate > 0 && (
-                                  <span style={{fontSize:'.55rem',color:'var(--dim)',marginLeft:4}}>1 EURC = {eurcRate.toFixed(2)} USD</span>
-                                )}
+
                               </>
                             );
                           })()
