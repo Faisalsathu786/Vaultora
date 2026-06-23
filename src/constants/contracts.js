@@ -116,4 +116,4 @@ export const V2_ABI = [
   "function cancelMarket(uint256 mktId) external",
 ];
 
-export const V3_ADDRESS = "0xfc3E223210Ac97bE51BD75E3C414A5b6F21FeeE2";
+export const V3_ADDRESS = "0xf9eB65b467Edc9b1e702e3f20C7CF7FAC3625300";
