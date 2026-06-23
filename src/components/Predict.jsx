@@ -30,8 +30,18 @@ export default function Predict({
 
   const uploadImage = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
+    // Compress to thumbnail (200px max) before storing
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w *= r; h *= r; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+      setNewMkt(p => ({ ...p, imageUrl: c.toDataURL('image/jpeg', 0.7) }));
+    };
     const reader = new FileReader();
-    reader.onload = () => setNewMkt(p => ({ ...p, imageUrl: reader.result }));
+    reader.onload = () => { const img2 = new Image(); img2.src = reader.result; };
     reader.readAsDataURL(file);
   };
 

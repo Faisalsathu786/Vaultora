@@ -275,8 +275,8 @@ export function useV3PredictionData(wallet, getSigner) {
       const opts = newMkt.options.filter(o => o.trim()).slice(0, 10);
       const endTime = Math.floor(Date.now() / 1000) + Number(newMkt.days) * 86400;
       const imgUrl = newMkt.imageUrl?.trim() || '';
-      // Reject data URLs (file uploads) - too large for on-chain
-      if (imgUrl.startsWith('data:')) { throw new Error('Image too large. Use URL instead of file upload'); }
+      // Allow compressed data URLs (thumbs < 50KB)
+      if (imgUrl.startsWith('data:') && imgUrl.length > 100000) { throw new Error('Image too large. Use URL instead'); }
       const tok = newMkt.token || 0;
       // Store token info in imageUrl using prefix convention
       const storage = tok === 1 ? (imgUrl ? `__img1__${imgUrl}` : '__tok1__') : (imgUrl || '');
