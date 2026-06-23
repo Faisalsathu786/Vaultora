@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { V3_ADDRESS, V3_ABI } from '../constants/contracts.js';
+import { V6_BYTECODE, V6_ABI } from '../constants/v6-build.js';
 
 const RPC = 'https://rpc.testnet.arc.network';
 function getProvider() { return window.ethereum ? new ethers.BrowserProvider(window.ethereum) : new ethers.JsonRpcProvider(RPC); }
@@ -18,6 +19,8 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
   const [dsgn, setDsgn] = useState({ bg: '', primary: '', accent: '', cardBg: '', theme: 'dark', mktImgW: '', mktImgH: '' });
   const [eurcRate, setEurcRate] = useState('');
   const [accFees, setAccFees] = useState({ usdc: '0', eurc: '0' });
+  const [upgradeStatus, setUpgradeStatus] = useState('');
+  const [upgrading, setUpgrading] = useState(false);
 
 
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
 
       {/* Tab bar */}
       <div style={{display:'flex',gap:6,marginBottom:10,flexWrap:'wrap',borderBottom:'1px solid #333',paddingBottom:8}}>
-        {['markets','config','design','branding'].map(t => (
+        {['markets','config','design','branding','upgrade'].map(t => (
           <button key={t} className="btn-primary" style={{padding:'4px 14px',fontSize:'.7rem',opacity:tab===t?1:.5}}
             onClick={()=>setTab(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
         ))}
@@ -279,7 +282,20 @@ export default function AdminPanel({ wallet, getSigner, notify, markets, fetchMa
         </div>
       </>}
 
-      {tab === 'branding' && <>
+      {tab === 'upgrade' && <div className="card" style={{marginTop:8}}>
+            <h3 style={{fontSize:'1rem',marginBottom:12,color:'var(--clr, #d745ff)'}}>Upgrade to V6</h3>
+            <p style={{fontSize:'.75rem',color:'#888',marginBottom:8}}>Adds getTopTraders, getUserTxHistory, on-chain leaderboard</p>
+            <p style={{fontSize:'.65rem',color:'#666',marginBottom:12}}>Proxy: {V3_ADDRESS}</p>
+            <button className="btn-primary" onClick={handleUpgradeV6} disabled={upgrading}
+              style={upgrading?{{opacity:.6}}:{}}>
+              {upgrading ? 'Deploying...' : 'Upgrade to V6'}
+            </button>
+            {upgradeStatus && <p style={{fontSize:'.7rem',color:'#60a5fa',marginTop:8}}>{upgradeStatus}</p>}
+            {msg && msg.includes('V6') && <p style={{fontSize:'.7rem',color:'#34d399',marginTop:4}}>{msg}</p>}
+          </div>
+        }
+
+        {tab === 'branding' && <>
         <p style={{fontSize:'.7rem',color:'#999',marginBottom:8}}>Customize the site branding</p>
         <div style={{display:'flex',flexDirection:'column',gap:8}}>
           <div>
