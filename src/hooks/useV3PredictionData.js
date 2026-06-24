@@ -202,14 +202,29 @@ export function useV3PredictionData(wallet, getSigner) {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
       const m = marketsRef.find(x => x.id === marketId);
-      if (!m || !m.pools || !m.totalPool) return;
+      if (!m || !m.pools || !m.supplies) return;
       const pool = Number(m.pools[outcome] || 0);
-      const tp = Number(m.totalPool || 0);
-      if (pool <= 0 || tp <= 0) { setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: '0'})); return; }
-      // Use pool ratio: pool[O] / totalPool is the implied probability
-      // Payout for $bet on outcome O = bet / (pool/totalPool) = bet * totalPool / pool
-      const estPayout = Number(amount) * (tp / pool);
-      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(estPayout > 0 ? estPayout : 0) }));
+      const supply = Number(m.supplies[outcome] || 0);
+      
+      // Virtual AMM constants from the contract
+      const VIRTUAL_USDC = 1000;        // 1000 USDC
+      const VIRTUAL_TOKENS = 1000000;   // 1M tokens
+      
+      const net = Number(amount);
+      const effPool = pool + VIRTUAL_USDC;
+      const effSupply = supply + VIRTUAL_TOKENS;
+      
+      // Tokens received for this buy
+      const tokens = net * effSupply / effPool;
+      
+      // New total pool after buy (all outcomes)
+      const newTotalPool = Number(m.totalPool || 0) + net;
+      const newSupply = supply + tokens;
+      
+      // Payout if this outcome wins: distribute the ENTIRE new total pool
+      const payout = newSupply > 0 ? tokens * newTotalPool / newSupply : 0;
+      
+      setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(payout > 0 ? payout.toFixed(2) : '0') }));
     } catch (e) { /* ignore */ }
   }, []);
 
