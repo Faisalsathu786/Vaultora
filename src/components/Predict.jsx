@@ -59,11 +59,16 @@ export default function Predict({
   const getPositionValue = (mId, outcome, balance) => {
     const m = markets.find(x => x.id === mId);
     if (!m || !m.pool || !m.supply) return { value: 0, pct: 0 };
-    const pool = BigInt(m.pool?.[outcome] || 0);
+    // For resolved markets, use total pool (all outcomes), not just winning pool
     const supply = BigInt(m.supply?.[outcome] || 1n);
+    if (m.resolved && m.totalPool > 0) {
+      const tp = BigInt(Math.floor(Number(m.totalPool) * 1e6));
+      const tok = supply > 0n ? (tp * BigInt(balance)) / supply : 0n;
+      return { value: Number(tok) / 1e6, pct: 0 };
+    }
+    const pool = BigInt(m.pool?.[outcome] || 0);
     const tok = supply > 0n ? (pool * BigInt(balance)) / supply : 0n;
-    const currentValue = Number(tok) / 1e6;
-    return { value: currentValue, pct: 0 };
+    return { value: Number(tok) / 1e6, pct: 0 };
   };
 
   const getPotentialPayout = (mId, outcome, balance) => {
