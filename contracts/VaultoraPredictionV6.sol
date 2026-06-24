@@ -786,7 +786,9 @@ contract VaultoraPredictionV6 is
         uint256 userTokens = positionBalances[marketId][winIdx][user];
         if (userTokens == 0 || m.supplies[winIdx] == 0) return 0;
 
-        return userTokens * m.pools[winIdx] / m.supplies[winIdx];
+        // Distribute total pool, not just winning pool
+        uint256 totalPool = _totalPoolUsdc(m);
+        return userTokens * totalPool / m.supplies[winIdx];
     }
 
     /// @notice Total USDC pool across all outcomes for a market.
