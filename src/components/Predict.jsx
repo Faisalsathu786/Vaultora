@@ -491,7 +491,7 @@ else activePos.push(entry);
                     {buySel && betAmt && Number(betAmt)>0 && (() => {
                       const [_, oi] = buySel.split('_').map(Number);
                       const est = payoutEst[`${mId}_${oi}`];
-                      const feeAmt = Number(betAmt) * 0.008;
+                      const feeAmt = Number(betAmt) * (Number(m.buyFee||0) / 10000);
                       return (
                         <div className="sell-preview" style={{marginTop:8}}>
                           <div className="sp-label" style={{color:'var(--clr, #34d399)'}}>Buy {opts[oi]}</div>
@@ -514,12 +514,17 @@ else activePos.push(entry);
                         </span>
                       </div>
                       <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row"><span>Fee (0.8%)</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
+                          <div className="sp-row"><span>Fee</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
                           <div className="sp-row sp-total">{(()=>{
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
-  const op=Number(m.pools?.[oi]||0);const tp=Number(m.totalPool||0);
-  if(op<=0||tp<=0)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
-  const po=bb*(tp/op);const pc=((po/bb-1)*100).toFixed(1);
+  const pool=Number(m.pools?.[oi]||0);const sup=Number(m.supplies?.[oi]||0);const tp=Number(m.totalPool||0);
+  const VIRTUAL_USDC=1000, VIRTUAL_TOKENS=1000000;
+  const effPool=pool+VIRTUAL_USDC, effSupply=sup+VIRTUAL_TOKENS;
+  const tokens=bb*effSupply/effPool;
+  const newTp=tp+bb, newSup=sup+tokens;
+  if(tokens<=0||newSup<=0)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
+  const po=tokens*newTp/newSup;
+  const pc=((po/bb-1)*100).toFixed(1);
   return<><span>Potential Return</span><span style={{color:'var(--clr,#34d399)'}}>~${po.toFixed(2)} ({pc}%)</span></>;
 })()}</div>
                           <button className="btn-primary full" style={{marginTop:6,background:'var(--clr, #059669)'}}
