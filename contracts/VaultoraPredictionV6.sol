@@ -298,7 +298,7 @@ contract VaultoraPredictionV6 is
         maxMarketDuration = 365 days;
 
         disputeBondBps       = 10;       // 0.1 %
-        disputeWindowDuration = 24 hours;
+        disputeWindowDuration = 0; // instant finalize (set via admin if needed)
 
         brandName        = "Vaultora";
         brandDescription = "Prediction market on Arc";
