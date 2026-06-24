@@ -436,7 +436,7 @@ else activePos.push(entry);
               {!endedAt ? (() => {
                 const d = m.secsLeft / 86400;
                 const tc = d > 7 ? 'time-green' : d > 1 ? 'time-yellow' : 'time-red';
-                return <span className={tc}>{Math.floor(d)}d {Math.floor((m.secsLeft % 86400) / 3600)}h left</span>;
+                return <span className={tc}>{Math.floor(d)}d {Math.floor((m.secsLeft % 86400) / 3600)}h {Math.floor((m.secsLeft % 3600) / 60)}m left</span>;
               })() : 'Ended'}
               {' · '}{tokSym}
               {resolved && ` · Winner: ${opts[m.winningOutcome]}`}
