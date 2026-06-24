@@ -83,9 +83,12 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
     finally { setLoading(false); }
   };
 
+  // Auto-refresh every 15 seconds
   useEffect(() => {
     fetchAll();
-  }, [wallet, supabaseLbData]);;
+    const interval = setInterval(fetchAll, 15000);
+    return () => clearInterval(interval);
+  }, [wallet, supabaseLbData]);
 
   const formatVol = (v) => {
     if (!v || v < 0.01) return '$0';
@@ -107,10 +110,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
         </div>
       </div>
       {topUsers.length === 0 ? (
-        <div>
-          <p className="empty">No traders yet. Place a bet to appear!</p>
-          {wallet && <p className="empty" style={{fontSize:'.65rem',color:'#888',marginTop:4}}>Tip: Set up Supabase to enable full leaderboard with all traders.</p>}
-        </div>
+        <p className="empty">No traders yet. Place a bet to appear!</p>
       ) : (
         <>
           {/* Podium — top 3 */}
@@ -124,7 +124,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </div>
             ))}
           </div>
-          {/* Table — all users */}
+          {/* Table — all users (top 100) */}
           <div className="lb-table-wrap">
             <table className="lb-table">
               <thead><tr><th>#</th><th>Trader</th><th>Volume</th><th>Bets</th><th>Markets</th></tr></thead>
@@ -141,7 +141,7 @@ export default function PredictLeaderboard({ wallet, supabaseLbData, supabase })
               </tbody>
             </table>
           </div>
-          {/* Your rank if not in list */}
+          {/* Your rank if outside top 100 */}
           {userRank && userRank.rank > topUsers.length && (
             <div className="your-rank-card">
               <div className="your-rank-label">Your Rank</div>
