@@ -1096,8 +1096,30 @@ contract VaultoraPredictionV6 is
         return _allUsers.length;
     }
 
-    /// @notice V6: Admin - scan all existing markets and retro-track users who have positions
-    
+    /// @notice V6: Admin — bulk retro-track existing users (call after V6 deployment)
+    /// @dev Data extracted off-chain from past Bought/Sold/Claimed events
+    function retroTrackUsers(
+        address[] calldata users,
+        uint256[] calldata totalVolumes,
+        uint256[] calldata wins,
+        uint256[] calldata losses,
+        uint256[] calldata claims,
+        uint256[] calldata marketCounts
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        uint256 n = users.length;
+        require(n == totalVolumes.length && n == wins.length && n == losses.length && n == claims.length && n == marketCounts.length, 'V6: array length mismatch');
+        for (uint256 i = 0; i < n; i++) {
+            address user = users[i];
+            if (!_isUserTracked[user]) {
+                _isUserTracked[user] = true;
+                _allUsers.push(user);
+            }
+            _userTotalVolume[user] += totalVolumes[i];
+            _userWins[user] += wins[i];
+            _userLosses[user] += losses[i];
+            _userClaimed[user] += claims[i];
+        }
+    }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
         emit Upgraded(newImplementation);
