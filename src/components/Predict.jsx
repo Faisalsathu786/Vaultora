@@ -513,8 +513,8 @@ else activePos.push(entry);
                           Market: {(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1') ? 'EURC' : 'USDC'}
                         </span>
                       </div>
-                      <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
-                          <div className="sp-row"><span>Fee</span><span>-{feeAmt.toFixed(2)} {PAYMENT_TOKENS?.[tokenIdx]?.name || 'USDC'}</span></div>
+                      <div className="sp-row"><span>You spend</span><span>{Number(betAmt).toFixed(2)} {(()=>{const t=(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1')?1:0;return t===1?'EURC':'USDC';})()}</span></div>
+                          <div className="sp-row"><span>Fee</span><span>-{feeAmt.toFixed(2)} {(()=>{const t=(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1')?1:0;return t===1?'EURC':'USDC';})()}</span></div>
                           <div className="sp-row sp-total">{(()=>{
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
   const pool=Number(m.pools?.[oi]||0);const sup=Number(m.supplies?.[oi]||0);const tp=Number(m.totalPool||0);
