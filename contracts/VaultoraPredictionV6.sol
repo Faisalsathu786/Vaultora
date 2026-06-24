@@ -606,11 +606,12 @@ contract VaultoraPredictionV6 is
         uint256 userTokens = positionBalances[marketId][winIdx][msg.sender];
         require(userTokens > 0);
 
-        uint256 winPool   = m.pools[winIdx];
         uint256 winSupply = m.supplies[winIdx];
         require(winSupply > 0);
 
-        uint256 payout = userTokens * winPool / winSupply;
+        // Claim from TOTAL pool (all outcomes), not just winning outcome
+        uint256 totalPool = _totalPoolUsdc(m);
+        uint256 payout = userTokens * totalPool / winSupply;
 
         positionBalances[marketId][winIdx][msg.sender] = 0;
         hasClaimed[marketId][msg.sender] = true;
