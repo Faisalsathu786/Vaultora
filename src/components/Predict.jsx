@@ -388,21 +388,35 @@ else activePos.push(entry);
         return (
           <div key={mId} className={`mkt-card${endedAt ? ' ended-card' : ''}`}
             style={{display:'flex',gap:12,alignItems:'flex-start'}}>
-            {m.image && m.image.startsWith('__tok') ? (
-              <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
-                {m.image === '__tok1__' ? 'EURC' : 'USDC'}
-              </div>
-            ) : m.image && m.image.startsWith('__img1__') ? (
-              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
-                <img src={m.image.slice(8)} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
-                  onError={e => e.target.parentElement.style.display = 'none'} />
-              </div>
-            ) : m.image && m.image.startsWith('http') ? (
-              <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
-                <img src={m.image} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
-                  onError={e => e.target.parentElement.style.display = 'none'} />
-              </div>
-            ) : null}
+            {(() => {
+              const img = m.image || '';
+              const tokMatch = img.match(/^__tok(\d)__?$/);
+              if (tokMatch) {
+                return (
+                  <div style={{width:70,height:70,minWidth:70,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(215,69,255,.08)',fontSize:'.6rem',fontWeight:700,color:'#d745ff',flexShrink:0}}>
+                    {tokMatch[1] === '1' ? 'EURC' : 'USDC'}
+                  </div>
+                );
+              }
+              const imgMatch = img.match(/^__img(\d)__(.+)/);
+              if (imgMatch) {
+                return (
+                  <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                    <img src={imgMatch[2]} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                      onError={e => e.target.parentElement.style.display = 'none'} />
+                  </div>
+                );
+              }
+              if (img.startsWith('http')) {
+                return (
+                  <div className="mkt-img-wrap" style={{width:70,height:70,minWidth:70,borderRadius:10,overflow:'hidden',flexShrink:0}}>
+                    <img src={img} alt="" className="mkt-img" style={{width:70,height:70,objectFit:'cover'}}
+                      onError={e => e.target.parentElement.style.display = 'none'} />
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <div style={{flex:1,minWidth:0}}>
             <div className="mkt-q">{m.question}

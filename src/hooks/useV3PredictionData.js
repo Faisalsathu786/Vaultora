@@ -294,7 +294,7 @@ export function useV3PredictionData(wallet, getSigner) {
       if (imgUrl.startsWith('data:') && imgUrl.length > 100000) { throw new Error('Image too large. Use URL instead'); }
       const tok = newMkt.token || 0;
       // Store token info in imageUrl using prefix convention
-      const storage = tok === 1 ? (imgUrl ? `__img1__${imgUrl}` : '__tok1__') : (imgUrl || '');
+      const storage = imgUrl ? `__img${tok}__${imgUrl}` : (tok === 0 ? '__tok0__' : '__tok1__');
       window.__cm = 3;
       let tx;
       if (storage) tx = await c.createMarketWithImage(newMkt.question, opts, endTime, storage);
