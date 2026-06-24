@@ -206,23 +206,25 @@ export function useV3PredictionData(wallet, getSigner) {
       const pool = Number(m.pools[outcome] || 0);
       const supply = Number(m.supplies[outcome] || 0);
       
-      // Virtual AMM constants from the contract
-      const VIRTUAL_USDC = 1000;        // 1000 USDC
-      const VIRTUAL_TOKENS = 1000000;   // 1M tokens
+      // Contract uses 6-decimal raw: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
+      const netRaw = Number(amount) * 1e6;
+      const totalPoolRaw = Number(m.totalPool || 0) * 1e6;
+      const VIRTUAL_USDC = 1000e6;
+      const VIRTUAL_TOKENS = 1e6 * 1e18;
       
-      const net = Number(amount);
       const effPool = pool + VIRTUAL_USDC;
       const effSupply = supply + VIRTUAL_TOKENS;
       
-      // Tokens received for this buy
-      const tokens = net * effSupply / effPool;
+      // Tokens received for this buy (18 decimal)
+      const tokens = netRaw * effSupply / effPool;
       
-      // New total pool after buy (all outcomes)
-      const newTotalPool = Number(m.totalPool || 0) + net;
+      // New total pool after buy + new supply after buy
+      const newTotalPool = totalPoolRaw + netRaw;
       const newSupply = supply + tokens;
       
-      // Payout if this outcome wins: distribute the ENTIRE new total pool
-      const payout = newSupply > 0 ? tokens * newTotalPool / newSupply : 0;
+      // Payout if this outcome wins (6 decimal), convert to USD
+      const payoutRaw = newSupply > 0 ? tokens * newTotalPool / newSupply : 0;
+      const payout = payoutRaw / 1e6;
       
       setPayoutEst(p => ({ ...p, [`${marketId}_${outcome}`]: String(payout > 0 ? payout.toFixed(2) : '0') }));
     } catch (e) { /* ignore */ }

@@ -74,10 +74,10 @@ export default function Predict({
   const getPotentialPayout = (mId, outcome, balance) => {
     const m = markets.find(x => x.id === mId);
     if (!m || !m.supply || !m.totalPool) return 0;
-    const tp = Number(m.totalPool || 0);
-    const sup = Number(m.supply?.[outcome] || 0);
-    if (tp <= 0 || sup <= 0 || balance <= 0) return 0;
-    return Number(((BigInt(Math.floor(tp)) * BigInt(balance)) / BigInt(sup)).toString()) / 1e6;
+    const tpRaw = BigInt(Math.floor(Number(m.totalPool || 0) * 1e6));
+    const sup = BigInt(m.supply?.[outcome] || 1n);
+    if (tpRaw <= 0n || sup <= 0n || balance <= 0n) return 0;
+    return Number((tpRaw * BigInt(balance) / sup).toString()) / 1e6;
   };
 
   const handleSell = async (mId, outcome) => {
@@ -354,9 +354,9 @@ else activePos.push(entry);
                               )}
                               {isWinner && (
                                 <div style={{display:'flex',gap:4,flexDirection:'column'}}>
-                                  <div style={{fontSize:'.6rem',color:'#34d399',fontWeight:600}}>Won: ${pv.value.toFixed(2)}</div>
+                                  <div style={{fontSize:'.6rem',color:'#34d399',fontWeight:600}}>Won: ${pp.toFixed(2)}</div>
                                   <button className="btn-primary" style={{fontSize:'.65rem',padding:'3px 10px',flex:1}}
-                                    onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');const ch=JSON.parse(localStorage.getItem('vt_claims')||'[]');ch.push({mId,q:m.question,o:opt,amt:pv.value.toFixed(2),t:Date.now()});localStorage.setItem('vt_claims',JSON.stringify(ch.slice(-50)));}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim ${pv.value.toFixed(2)}</button>
+                                    onClick={async (e)=>{e.stopPropagation();setClaiming(p=>({...p,[mId]:true}));try{await claimWinnings(mId);notify('Claimed!','success');const ch=JSON.parse(localStorage.getItem('vt_claims')||'[]');ch.push({mId,q:m.question,o:opt,amt:pp.toFixed(2),t:Date.now()});localStorage.setItem('vt_claims',JSON.stringify(ch.slice(-50)));}catch(e){notify('Claim failed','error');}setClaiming(p=>({...p,[mId]:false}));}}>Claim ${pp.toFixed(2)}</button>
                                 </div>
                               )}
                             </div>
@@ -518,12 +518,14 @@ else activePos.push(entry);
                           <div className="sp-row sp-total">{(()=>{
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
   const pool=Number(m.pools?.[oi]||0);const sup=Number(m.supplies?.[oi]||0);const tp=Number(m.totalPool||0);
-  const VIRTUAL_USDC=1000, VIRTUAL_TOKENS=1000000;
+  // Contract uses 6-decimal raw values: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
+  const bbRaw=bb*1e6, tpRaw=tp*1e6;
+  const VIRTUAL_USDC=1000e6, VIRTUAL_TOKENS=1e6*1e18;
   const effPool=pool+VIRTUAL_USDC, effSupply=sup+VIRTUAL_TOKENS;
-  const tokens=bb*effSupply/effPool;
-  const newTp=tp+bb, newSup=sup+tokens;
+  const tokens=bbRaw*effSupply/effPool;
+  const newTp=tpRaw+bbRaw, newSup=sup+tokens;
   if(tokens<=0||newSup<=0)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
-  const po=tokens*newTp/newSup;
+  const po=tokens*newTp/newSup/1e6;
   const pc=((po/bb-1)*100).toFixed(1);
   return<><span>Potential Return</span><span style={{color:'var(--clr,#34d399)'}}>~${po.toFixed(2)} ({pc}%)</span></>;
 })()}</div>
