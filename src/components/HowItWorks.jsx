@@ -42,22 +42,22 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
 
           {/* --- PREDICTION MARKETS DEEP DIVE --- */}
           <section className="hiw-section">
-            <h3>Prediction Markets — How It Works</h3>
-            <p>Each market is a self-contained liquidity pool. When you buy tokens, the price moves. When you sell, the price adjusts back. No order books, no waiting — instant execution.</p>
+            <h3>Prediction Markets: How It Works</h3>
+            <p>Each market is a self-contained liquidity pool. When you buy tokens the price moves, when you sell it adjusts back. No order books, no waiting. Instant execution.</p>
 
             <div className="hiw-steps">
               <div className="hiw-step">
                 <div className="hiw-step-num">1</div>
                 <div>
                   <h4>Virtual AMM Engine</h4>
-                  <p>Every outcome token is priced by a constant-product AMM seeded with <strong>1,000 USDC</strong> and <strong>1M tokens</strong> of virtual liquidity. This ensures prices always exist — no counterparty needed. Token price = pool ÷ supply, giving each outcome a dynamic probability.</p>
+                  <p>Every outcome token is priced by a constant-product AMM seeded with <strong>1,000 USDC</strong> and <strong>1M tokens</strong> of virtual liquidity. This ensures prices always exist with no counterparty needed. Token price is pool divided by supply, giving each outcome a dynamic probability.</p>
                 </div>
               </div>
               <div className="hiw-step">
                 <div className="hiw-step-num">2</div>
                 <div>
                   <h4>Buy & Sell Any Outcome</h4>
-                  <p>Buy tokens on the outcome you believe in. The AMM mints new tokens at the current price, adjusting the odds. Sell anytime before resolution — the AMM buys back at the current price minus an exit tax that decreases over time (30% at 1 day → 0% after 7 days).</p>
+                  <p>Buy tokens on the outcome you believe in. The AMM mints new tokens at the current price, adjusting the odds. Sell anytime before resolution. The AMM buys back at the current price minus an exit tax that decreases over time (30% at 1 day, 0% after 7 days).</p>
                 </div>
               </div>
               <div className="hiw-step">
@@ -78,7 +78,7 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
                 <div className="hiw-step-num">5</div>
                 <div>
                   <h4>Claim Winnings</h4>
-                  <p>If your outcome wins, your share = (your tokens ÷ total winning supply) × total pool. Loser pool funds get distributed to winners — fair and transparent. Once finalized, click Claim and tokens are sent to your wallet.</p>
+                  <p>If your outcome wins, your share is (your tokens / total winning supply) x total pool. Loser pool funds get distributed to winners. Once finalized, click Claim and tokens are sent to your wallet.</p>
                 </div>
               </div>
               <div className="hiw-step">
@@ -135,7 +135,7 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
                 <div className="hiw-step-num">1</div>
                 <div>
                   <h4>Connect Wallet</h4>
-                  <p>MetaMask, Coinbase, Trust, Rabby — any supported wallet. Auto-switches to Arc Testnet on connection.</p>
+                  <p>MetaMask, Coinbase, Trust, Rabby. Any supported wallet. Auto-switches to Arc Testnet on connection.</p>
                 </div>
               </div>
               <div className="hiw-step">
@@ -163,7 +163,7 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
                 <div className="hiw-step-num">5</div>
                 <div>
                   <h4>Track & Claim</h4>
-                  <p>Monitor active positions in your Portfolio tab. When a market resolves and finalizes, winners appear in the Settled tab — click Claim to receive USDC or EURC.</p>
+                  <p>Monitor active positions in your Portfolio tab. When a market resolves and finalizes, winners appear in the Settled tab. Click Claim to receive USDC or EURC.</p>
                 </div>
               </div>
             </div>
@@ -205,7 +205,8 @@ export default function HowItWorks({ isOpen, onClose, isDark }) {
               <p><strong>How are disputes handled?</strong> After resolution, a 60-second dispute window opens. Anyone can post a bond equal to 0.1% of the pool to challenge. If disputed, an admin re-resolves. Otherwise anyone can finalize after the window passes.</p>
               <p><strong>Which tokens can I use?</strong> USDC and EURC. EURC deposits convert at the on-chain EURC rate. Payouts are always in the market's designated token.</p>
               <p><strong>What does the leaderboard track?</strong> Total volume (USDC), number of bets, number of markets participated, wins, losses, and total claimed. Sourced from on-chain events and contract state.</p>
-              <p><strong>What fees exist?</strong> Vault: no platform fees. Prediction markets: optional buy fee (configurable), exit tax on sells (decreasing over time). No fee on claiming winnings.</p>
+              <p><strong>What fees exist?</strong> Vault: no platform fees. Prediction markets: optional buy fee (configurable by admin), exit tax on sells that decreases over time. No fee on claiming winnings.</p>
+              <p><strong>Where does the redeem tax go?</strong> The exit tax from sells is collected in the contract as <strong>accumulatedFees</strong>. The platform admin can withdraw it via <code>withdrawTokens</code>. This incentivizes holding positions to resolution instead of flipping early. The tax rate drops from 30% (day 1) to 0% (day 7+).</p>
               <p><strong>Is the code audited?</strong> Contracts are verified on ArcScan with UUPS upgradeability. Foundry and Hardhat test coverage exists. Formal audit not yet performed.</p>
             </div>
           </section>
