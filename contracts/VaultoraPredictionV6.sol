@@ -436,16 +436,6 @@ contract VaultoraPredictionV6 is
     //  BUY  (virtual AMM)
     // ════════════════════════════════════════════════════════════════
 
-    /// @notice Buy outcome tokens with USDC.
-    ///         User receives tokens of EVERY outcome.
-    /// @param marketId  Market to buy into
-    /// @param amount    USDC amount to spend (6 decimals)
-    struct BuyParams {
-        uint256 marketId;
-        uint256 outcome;
-        uint256 amount;
-    }
-    
     function buyTokens(
         uint256 marketId,
         uint256 outcome,
