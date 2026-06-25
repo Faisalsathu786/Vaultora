@@ -395,6 +395,7 @@ contract VaultoraPredictionV6 is
               marketTokenIdx[marketId] = 0; // default USDC
             }
           }
+        }
 
         // Deploy per-outcome ERC20 tokens and initialise pool/supply arrays
         address[] memory outcomeAddrs = new address[](n);
@@ -866,10 +867,6 @@ contract VaultoraPredictionV6 is
         }
     }
 
-    /// @notice Get user's market interaction history.
-    function getUserHistory(address user) external view returns (uint256[] memory) {
-        return _userMarketHistory[user];
-    }
 
     // ════════════════════════════════════════════════════════════════
     //  ADMIN  FUNCTIONS
@@ -1008,27 +1005,11 @@ contract VaultoraPredictionV6 is
     }
 
     /// @notice Record a market interaction in the user's private history.
-    function _trackUser(address user) internal {
-        if (!_isUserTracked[user]) {
-            _isUserTracked[user] = true;
-            _allUsers.push(user);
-        }
-    }
+    function _trackUser(address user) internal { /* no-op */ }
 
-    function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal {
-        require(_maxTradesPerUser == 0 || _userTradeHistory[user].length < _maxTradesPerUser);
-        _userTradeHistory[user].push(TradeRecord(marketId, outcome, amount, block.timestamp, action));
-        _userTotalVolume[user] += amount;
-        _trackUser(user);
-    }
+    function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal { /* no-op */ }
 
-    function _recordInteraction(uint256 marketId, address user) internal {
-        uint256[] storage hist = _userMarketHistory[user];
-        // Avoid duplicates - only push if the last entry isn't the same market
-        if (hist.length == 0 || hist[hist.length - 1] != marketId) {
-            hist.push(marketId);
-        }
-    }
+    function _recordInteraction(uint256 marketId, address user) internal { /* no-op */ }
 
     /// @notice Truncate a string to `maxLen` bytes (not characters).
     function _truncate(string memory str, uint256 maxLen) internal pure returns (string memory) {
@@ -1083,81 +1064,9 @@ contract VaultoraPredictionV6 is
 
     /// @notice V6: Get total trade records for a user
 
-    /// @notice V6: Get all-time trader stats
-    function getUserStats(address user) external view returns (
-        uint256 totalVolume,
-        uint256 wins,
-        uint256 losses,
-        uint256 claimed,
-        uint256 marketCount
-    ) {
-        return (_userTotalVolume[user], _userWins[user], _userLosses[user], _userClaimed[user], _userMarketHistory[user].length);
-    }
 
-    /// @notice V6: Get top N traders by volume (returns addresses + volumes)
-    function getTopTraders(uint256 n) external view returns (address[] memory, uint256[] memory) {
-        uint256 totalUsers = _allUsers.length;
-        if (n > totalUsers) n = totalUsers;
 
-        // Simple bubble sort (n is small, typically < 100)
-        address[] memory addrs = new address[](totalUsers);
-        uint256[] memory vols = new uint256[](totalUsers);
-        for (uint256 i = 0; i < totalUsers; i++) {
-            addrs[i] = _allUsers[i];
-            vols[i] = _userTotalVolume[_allUsers[i]];
-        }
 
-        for (uint256 i = 0; i < totalUsers; i++) {
-            for (uint256 j = i + 1; j < totalUsers; j++) {
-                if (vols[j] > vols[i]) {
-                    (vols[i], vols[j]) = (vols[j], vols[i]);
-                    (addrs[i], addrs[j]) = (addrs[j], addrs[i]);
-                }
-            }
-        }
-
-        address[] memory resultAddrs = new address[](n);
-        uint256[] memory resultVols = new uint256[](n);
-        for (uint256 i = 0; i < n; i++) {
-            resultAddrs[i] = addrs[i];
-            resultVols[i] = vols[i];
-        }
-        return (resultAddrs, resultVols);
-    }
-
-    /// @notice V6: Get total unique traders count
-    function getTraderCount() external view returns (uint256) {
-        return _allUsers.length;
-    }
-
-    /// @notice V6: Admin — bulk retro-track existing users (call after V6 deployment)
-    /// @dev Data extracted off-chain from past Bought/Sold/Claimed events
-    function retroTrackUsers(
-        address[] calldata users,
-        uint256[] calldata totalVolumes,
-        uint256[] calldata wins,
-        uint256[] calldata losses,
-        uint256[] calldata claims,
-        uint256[] calldata marketCounts
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 n = users.length;
-        require(n == totalVolumes.length && n == wins.length && n == losses.length && n == claims.length && n == marketCounts.length, 'V6: array length mismatch');
-        for (uint256 i = 0; i < n; i++) {
-            address user = users[i];
-            if (!_isUserTracked[user]) {
-                _isUserTracked[user] = true;
-                _allUsers.push(user);
-            }
-            _userTotalVolume[user] += totalVolumes[i];
-            _userWins[user] += wins[i];
-            _userLosses[user] += losses[i];
-            _userClaimed[user] += claims[i];
-        }
-    }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        emit Upgraded(newImplementation);
-    }
 
     // ════════════════════════════════════════════════════════════════
     //  STORAGE  GAP  (reserved for future upgrades)
@@ -1173,6 +1082,9 @@ contract VaultoraPredictionV6 is
     function setOutcomeTokenImpl(address impl) external onlyRole(DEFAULT_ADMIN_ROLE) {
         outcomeTokenImpl = impl;
     }
+
+    
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     uint256[43] private __gap;
 }
