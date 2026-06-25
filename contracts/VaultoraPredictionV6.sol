@@ -556,7 +556,8 @@ contract VaultoraPredictionV6 is
         uint256 netReturn = grossReturn - tax;
 
         if (tax > 0) {
-            accumulatedFees[usdcToken] += tax;
+            address feeTokenSell = marketTokenIdx[marketId] == 1 ? eurcToken : usdcToken;
+            accumulatedFees[feeTokenSell] += tax;
         }
 
         // V7: Pay out in the market's designated token
@@ -682,8 +683,13 @@ contract VaultoraPredictionV6 is
         uint256 bond = totalPool * disputeBondBps / 10000;
         require(bond > 0);
 
-        // Collect bond from disputer
-        IERC20(usdcToken).transferFrom(msg.sender, address(this), bond);
+        // Collect bond from disputer in market's designated token
+        address bondToken = marketTokenIdx[marketId] == 1 ? eurcToken : usdcToken;
+        uint256 bondAmount = bond;
+        if (bondToken == eurcToken) {
+          bondAmount = bond * 1e6 / eurcRate;
+        }
+        IERC20(bondToken).transferFrom(msg.sender, address(this), bondAmount);
         disputeBonds[marketId] = bond;
 
         // Revert market to unresolved
