@@ -171,22 +171,12 @@ contract VaultoraPredictionV6 is
     /// @notice Trade action types
     enum TradeType { Buy, Sell, Claim }
 
-    struct TradeRecord {
-        uint256 marketId;
-        uint256 outcome;
-        uint256 amount;
-        uint256 timestamp;
-        TradeType action;
-    }
-
-    /// @notice Private history: user -> market IDs they've interacted with
+        /// @notice Private history: user -> market IDs they've interacted with
     mapping(address => uint256[]) private _userMarketHistory;
 
     /// @notice V6: Full trade history per user (buy/sell/claim records)
-    mapping(address => TradeRecord[]) private _userTradeHistory;
 
     /// @notice V6: Max trade records per user (prevents DoS)
-    uint256 private _maxTradesPerUser;
 
     /// @notice V6: All unique traders
     address[] private _allUsers;
@@ -198,13 +188,10 @@ contract VaultoraPredictionV6 is
     mapping(address => uint256) private _userTotalVolume;
 
     /// @notice V6: Win count per user
-    mapping(address => uint256) private _userWins;
 
     /// @notice V6: Loss count per user
-    mapping(address => uint256) private _userLosses;
 
     /// @notice V6: Total claimed amount per user
-    mapping(address => uint256) private _userClaimed;
 
     // ════════════════════════════════════════════════════════════════
     //  EVENTS
@@ -275,7 +262,6 @@ contract VaultoraPredictionV6 is
     /// @param _usdc  USDC token address on Arc Testnet
     /// @param _eurc  EURC token address on Arc Testnet
     function initialize(address _usdc, address _eurc) public initializer {
-        _maxTradesPerUser = 500;
         require(_usdc != address(0));
         require(_eurc != address(0));
 
@@ -950,18 +936,7 @@ contract VaultoraPredictionV6 is
     }
 
     /// @notice Extend a market's end time.
-    function extendMarket(uint256 marketId, uint256 newEndTime)
-        external
-        onlyOwner
-        marketExists(marketId)
-    {
-        Market storage m = markets[marketId];
-        require(newEndTime > m.endTime);
-        require(!m.resolved);
-        m.endTime = newEndTime;
-        emit MarketExtended(marketId, newEndTime);
-    }
-
+    
     /// @notice Grant MARKET_CREATOR_ROLE to an address.
     function grantMarketCreator(address account) external onlyOwner {
         grantRole(MARKET_CREATOR_ROLE, account);
@@ -1005,11 +980,24 @@ contract VaultoraPredictionV6 is
     }
 
     /// @notice Record a market interaction in the user's private history.
-    function _trackUser(address user) internal { /* no-op */ }
+    function _trackUser(address user) internal {
+        if (!_isUserTracked[user]) {
+            _isUserTracked[user] = true;
+            _allUsers.push(user);
+        }
+    }
 
-    function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal { /* no-op */ }
+    function _pushTrade(address user, uint256 marketId, uint256 outcome, uint256 amount, TradeType action) internal {
+        _userTotalVolume[user] += amount;
+        _trackUser(user);
+    }
 
-    function _recordInteraction(uint256 marketId, address user) internal { /* no-op */ }
+    function _recordInteraction(uint256 marketId, address user) internal {
+        uint256[] storage hist = _userMarketHistory[user];
+        if (hist.length == 0 || hist[hist.length - 1] != marketId) {
+            hist.push(marketId);
+        }
+    }
 
     /// @notice Truncate a string to `maxLen` bytes (not characters).
     function _truncate(string memory str, uint256 maxLen) internal pure returns (string memory) {
@@ -1046,22 +1034,7 @@ contract VaultoraPredictionV6 is
 
     /// @notice Authorise an implementation upgrade - only owner.
     /// @notice V6: Get paginated trade history for a user
-    function getUserTxHistory(address user, uint256 limit, uint256 offset)
-        external view returns (TradeRecord[] memory)
-    {
-        TradeRecord[] storage all = _userTradeHistory[user];
-        uint256 total = all.length;
-        if (offset >= total) return new TradeRecord[](0);
-        uint256 end = offset + limit;
-        if (end > total) end = total;
-        uint256 resultLen = end - offset;
-        TradeRecord[] memory result = new TradeRecord[](resultLen);
-        for (uint256 i = 0; i < resultLen; i++) {
-            result[i] = all[offset + i];
-        }
-        return result;
-    }
-
+    
     /// @notice V6: Get total trade records for a user
 
 
@@ -1086,5 +1059,47 @@ contract VaultoraPredictionV6 is
     
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
+    
+    /// @notice Get user market history
+    function getUserHistory(address user) external view returns (uint256[] memory) {
+        return _userMarketHistory[user];
+    }
+
+    /// @notice Get user stats
+    function getUserStats(address user) external view returns (
+        uint256 totalVolume,
+        uint256 wins,
+        uint256 losses,
+        uint256 claimed,
+        uint256 marketCount
+    ) {
+        return (_userTotalVolume[user], 0, 0, 0, _userMarketHistory[user].length);
+    }
+
+    /// @notice Get trader count
+    function getTraderCount() external view returns (uint256) {
+        return _allUsers.length;
+    }
+
+    /// @notice Get top traders
+    function getTopTraders(uint256 n) external view returns (address[] memory, uint256[] memory) {
+        uint256 total = _allUsers.length;
+        if (n > total) n = total;
+        address[] memory addrs = new address[](n);
+        uint256[] memory vols = new uint256[](n);
+        for (uint256 i = 0; i < n; i++) {
+            addrs[i] = _allUsers[i];
+            vols[i] = _userTotalVolume[addrs[i]];
+        }
+        for (uint256 i = 0; i < n; i++) {
+            for (uint256 j = i + 1; j < n; j++) {
+                if (vols[j] > vols[i]) {
+                    (vols[i], vols[j]) = (vols[j], vols[i]);
+                    (addrs[i], addrs[j]) = (addrs[j], addrs[i]);
+                }
+            }
+        }
+        return (addrs, vols);
+    }
     uint256[43] private __gap;
 }
