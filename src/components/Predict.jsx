@@ -517,7 +517,7 @@ else activePos.push(entry);
                           <div className="sp-row"><span>Fee</span><span>-{feeAmt.toFixed(2)} {(()=>{const t=(m.image||'').startsWith('__tok1__')||(m.image||'').startsWith('__img1')?1:0;return t===1?'EURC':'USDC';})()}</span></div>
                           <div className="sp-row sp-total">{(()=>{
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
-  const pool=Number(m.pools?.[oi]||0);const sup=Number(m.supplies?.[oi]||0);const tp=Number(m.totalPool||0);
+  const pool=Number(m.pool?.[oi]||0);const sup=Number(m.supply?.[oi]||0);const tp=Number(m.totalPool||0);
   // Contract uses 6-decimal raw values: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
   const bbRaw=bb*1e6, tpRaw=tp*1e6;
   const VIRTUAL_USDC=1000e6, VIRTUAL_TOKENS=1e6*1e18;

@@ -202,9 +202,9 @@ export function useV3PredictionData(wallet, getSigner) {
     if (!amount || isNaN(amount) || Number(amount) <= 0) return;
     try {
       const m = marketsRef.find(x => x.id === marketId);
-      if (!m || !m.pools || !m.supplies) return;
-      const pool = Number(m.pools[outcome] || 0);
-      const supply = Number(m.supplies[outcome] || 0);
+      if (!m || !m.pool || !m.supply) return;
+      const pool = Number(m.pool[outcome] || 0);
+      const supply = Number(m.supply[outcome] || 0);
       
       // Contract uses 6-decimal raw: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
       const netRaw = Number(amount) * 1e6;
