@@ -74,7 +74,7 @@ export default function Predict({
   const getPotentialPayout = (mId, outcome, balance) => {
     const m = markets.find(x => x.id === mId);
     if (!m || !m.supply || !m.totalPool) return 0;
-    const tpRaw = BigInt(Math.floor(Number(m.totalPool || 0) * 1e6));
+    const tpRaw = BigInt(Math.floor(Number(m.totalPool || 0)));
     const sup = BigInt(m.supply?.[outcome] || 1n);
     if (tpRaw <= 0n || sup <= 0n || balance <= 0n) return 0;
     return Number((tpRaw * BigInt(balance) / sup).toString()) / 1e6;
@@ -519,7 +519,7 @@ else activePos.push(entry);
   const bb=Number(betAmt);if(!bb||!m||buySel===null||buySel===undefined)return<><span>Potential Return</span><span style={{color:'var(--dim,#888)'}}>—</span></>;
   const pool=Number(m.pool?.[oi]||0);const sup=Number(m.supply?.[oi]||0);const tp=Number(m.totalPool||0);
   // Contract uses 6-decimal raw values: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
-  const bbRaw=bb*1e6, tpRaw=tp*1e6;
+  const bbRaw=bb*1e6, tpRaw=tp;
   const VIRTUAL_USDC=1000e6, VIRTUAL_TOKENS=1e6*1e18;
   const effPool=pool+VIRTUAL_USDC, effSupply=sup+VIRTUAL_TOKENS;
   const tokens=bbRaw*effSupply/effPool;

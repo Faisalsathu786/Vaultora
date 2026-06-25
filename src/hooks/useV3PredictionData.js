@@ -208,7 +208,7 @@ export function useV3PredictionData(wallet, getSigner) {
       
       // Contract uses 6-decimal raw: VIRTUAL_USDC=1000*1e6, VIRTUAL_TOKENS=1M*1e18
       const netRaw = Number(amount) * 1e6;
-      const totalPoolRaw = Number(m.totalPool || 0) * 1e6;
+      const totalPoolUsdc = Number(m.totalPool || 0);
       const VIRTUAL_USDC = 1000e6;
       const VIRTUAL_TOKENS = 1e6 * 1e18;
       
@@ -218,8 +218,8 @@ export function useV3PredictionData(wallet, getSigner) {
       // Tokens received for this buy (18 decimal)
       const tokens = netRaw * effSupply / effPool;
       
-      // New total pool after buy + new supply after buy
-      const newTotalPool = totalPoolRaw + netRaw;
+      // New total pool after buy + new supply after buy (both in 6 decimal / 18 decimal)
+      const newTotalPool = totalPoolUsdc + netRaw;
       const newSupply = supply + tokens;
       
       // Payout if this outcome wins (6 decimal), convert to USD
