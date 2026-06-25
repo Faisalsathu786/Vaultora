@@ -165,6 +165,9 @@ contract VaultoraPredictionV6 is
     /// @notice Dispute bonds held per market
     mapping(uint256 => uint256) public disputeBonds;
 
+    /// @notice V7: Payment token for each market (0=USDC, 1=EURC)
+    mapping(uint256 => uint256) public marketTokenIdx;
+
     /// @notice Trade action types
     enum TradeType { Buy, Sell, Claim }
 
@@ -380,6 +383,19 @@ contract VaultoraPredictionV6 is
         m.createdAt  = block.timestamp;
         m.imageUrl   = imageUrl;
 
+        // V7: Parse payment token from imageUrl prefix (__tok0__=USDC, __tok1__=EURC, __img0__=USDC+img, __img1__=EURC+img)
+        {
+          bytes memory img = bytes(imageUrl);
+          if (img.length >= 7) {
+            bool isTokPrefix = (img[0] == '_' && img[1] == '_' && img[2] == 't' && img[3] == 'o' && img[4] == 'k');
+            bool isImgPrefix = (img[0] == '_' && img[1] == '_' && img[2] == 'i' && img[3] == 'm' && img[4] == 'g');
+            if (isTokPrefix || isImgPrefix) {
+              marketTokenIdx[marketId] = (img[5] == '1') ? 1 : 0;
+            } else {
+              marketTokenIdx[marketId] = 0; // default USDC
+            }
+          }
+
         // Deploy per-outcome ERC20 tokens and initialise pool/supply arrays
         address[] memory outcomeAddrs = new address[](n);
         uint256[] memory initPools    = new uint256[](n);
@@ -553,8 +569,13 @@ contract VaultoraPredictionV6 is
             accumulatedFees[usdcToken] += tax;
         }
 
-        // Always pay out in USDC
-        IERC20(usdcToken).transfer(msg.sender, netReturn);
+        // V7: Pay out in the market's designated token
+        address payTokenSell = marketTokenIdx[marketId] == 1 ? eurcToken : usdcToken;
+        uint256 netReturnConverted = netReturn;
+        if (payTokenSell == eurcToken) {
+          netReturnConverted = netReturn * 1e6 / eurcRate;
+        }
+        IERC20(payTokenSell).transfer(msg.sender, netReturnConverted);
 
         _pushTrade(msg.sender, marketId, 0, netReturn, TradeType.Sell);
         emit Sold(marketId, msg.sender, grossReturn, tax, netReturn);
@@ -618,7 +639,15 @@ contract VaultoraPredictionV6 is
 
         VaultoraOutcomeToken(m.outcomeTokens[winIdx]).burn(msg.sender, userTokens);
 
-        IERC20(usdcToken).transfer(msg.sender, payout);
+        // V7: Pay in the market's designated token (EURC or USDC)
+        {
+          address payToken = marketTokenIdx[marketId] == 1 ? eurcToken : usdcToken;
+          uint256 payoutAmount = payout;
+          if (payToken == eurcToken) {
+            payoutAmount = payout * 1e6 / eurcRate;
+          }
+          IERC20(payToken).transfer(msg.sender, payoutAmount);
+        }
 
         emit Claimed(marketId, msg.sender, payout);
     }
@@ -877,6 +906,12 @@ contract VaultoraPredictionV6 is
     {
         markets[marketId].imageUrl = imageUrl;
         emit MarketImageSet(marketId, imageUrl);
+    }
+
+    /// @notice V7: Set payment token for a market (0=USDC, 1=EURC) — retroactive fix.
+    function setMarketTokenIdx(uint256 marketId, uint256 _tokenIdx) external onlyOwner marketExists(marketId) {
+        require(_tokenIdx <= 1, "invalid token idx");
+        marketTokenIdx[marketId] = _tokenIdx;
     }
 
     /// @notice Update branding strings.
@@ -1143,5 +1178,5 @@ contract VaultoraPredictionV6 is
         outcomeTokenImpl = impl;
     }
 
-    uint256[44] private __gap;
+    uint256[43] private __gap;
 }
