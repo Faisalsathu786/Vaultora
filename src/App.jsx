@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { TOKENS, STORAGE_PREFIX, SESSION_KEY, SESSION_TTL_MS, ARC_CHAIN_ID, ARC_NETWORK } from './constants/contracts.js';
+import { useAccount } from 'wagmi';
+import WalletProvider from './providers/WalletProvider.jsx';
+import { TOKENS, TIERS, STORAGE_PREFIX, SESSION_KEY, SESSION_TTL_MS, ARC_CHAIN_ID, ARC_NETWORK } from './constants/contracts.js';
 import { useToast } from './hooks/useToast.js';
 import { useVaultData } from './hooks/useVaultData.js';
 import { useV3PredictionData } from './hooks/useV3PredictionData.js';
@@ -19,7 +21,7 @@ import HowItWorks from './components/HowItWorks.jsx';
 import { useSupabaseSync } from './hooks/useSupabase.js';
 import './App.css';
 
-export default function App() {
+function AppContent() {
   const [page, setPage] = useState("home");
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [isDark, setIsDark] = useState(() => (localStorage.getItem("vt_theme") || "dark") === "dark");
@@ -34,13 +36,15 @@ export default function App() {
 
   const { toast, showToast } = useToast();
 
-  // Wallet hooks — getSigner available after wallet connects
+  // ─── RainbowKit + Wagmi hooks ───────────────────────────────────
+  const { isConnected, connector } = useAccount();
+
+  // ─── Wallet state (SIWE-authenticated, ethers-based) ────────────
   const [wallet, setWallet] = useState(null);
   const [authStep, setAuthStep] = useState("idle");
   const [authError, setAuthError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [signStep, setSignStep] = useState("idle");
-  const [selectedWallet, setSelectedWallet] = useState(null);
   const [signError, setSignError] = useState("");
 
   const getSigner = async () => {
@@ -48,96 +52,18 @@ export default function App() {
     return await provider.getSigner();
   };
 
-  async function switchToArcNetwork() {
-    try {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: ARC_CHAIN_ID }],
-      });
-    } catch (err) {
-      const code = err?.code || err?.data?.originalError?.code || err?.error?.code;
-      if (code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [ARC_NETWORK],
-          });
-        } catch (addErr) {
-          throw new Error("Failed to add Arc Testnet. Try adding it manually.");
-        }
-      } else if (code === -32002) {
-        // Pending request already in MetaMask
-      } else if (code === 4001) {
-        throw new Error("Network switch cancelled in wallet.");
-      }
-    }
-  }
-
-  // Vault data
-  const vaultData = useVaultData(wallet, getSigner);
-  const { deposits, interests, stats, leaderboard, walletBal,
-          isLoading, isSuccess, statusMsg, setStatusMsg,
-          txHistory, setTxHistory,
-          fetchChainData, handleDeposit: vaultDeposit, handleWithdraw: vaultWithdraw,
-          refreshBalance, fetchOnChainHistory,
-  } = vaultData;
-
-  // Prediction data
-  const predData = useV3PredictionData(wallet, getSigner);
-  const { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
-          activeMktId, setActiveMktId, actionTab, setActionTab,
-          showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
-          payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
-          fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
-          isOwner, siteLogo, siteName, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, claimWinningsOnChain,
-          fetchPendingFees, fetchContractConfig,
-          eurcRate, PAYMENT_TOKENS,
-          usdcBal, eurcBal,
-  } = predData;
-
-  // Supabase sync
-  const supabaseData = useSupabaseSync(wallet, getSigner);
-  const { syncBet, syncMarketResult, syncVaultDeposit, syncVaultWithdraw } = supabaseData;
-
-  const connectWallet = async (wallet) => {
-    const activeProvider = wallet?.provider || window.ethereum;
-    if (!activeProvider) {
-      setSignError("No wallet provider detected. Please try again.");
-      setSignStep("error");
-      setConnecting(false);
-      return;
-    }
+  // ─── SIWE auth triggered after RainbowKit connects ──────────────
+  const doSiweAuth = useCallback(async () => {
+    if (!connector) return;
     try {
       setSignError("");
       setSignStep("signing");
       setConnecting(true);
-      const browserProvider = new ethers.BrowserProvider(activeProvider);
-      const signer = await browserProvider.getSigner();
-      const address = await signer.getAddress();
 
-      // Switch to Arc Testnet
-      try {
-        await activeProvider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: ARC_CHAIN_ID }],
-        });
-      } catch (err) {
-        const code = err?.code || err?.data?.originalError?.code || err?.error?.code;
-        if (code === 4902) {
-          try {
-            await activeProvider.request({
-              method: "wallet_addEthereumChain",
-              params: [ARC_NETWORK],
-            });
-          } catch {
-            setSignError("Failed to add Arc Testnet. Try adding it manually in wallet settings.");
-            setSignStep("error"); setConnecting(false); return;
-          }
-        } else if (code === 4001) {
-          setSignError("Network switch cancelled in your wallet.");
-          setSignStep("error"); setConnecting(false); return;
-        }
-      }
+      const cProvider = await connector.getProvider();
+      const ethersProvider = new ethers.BrowserProvider(cProvider);
+      const signer = await ethersProvider.getSigner();
+      const address = await signer.getAddress();
 
       // Build SIWE message — EIP-4361 compliant
       const nonce = Array.from({length: 16}, () =>
@@ -192,25 +118,27 @@ export default function App() {
         setSignStep("idle");
         setAuthStep("idle");
       }, 1200);
-      const newSigner = await browserProvider.getSigner();
-      await fetchChainData(newSigner);
-      await refreshBalance(newSigner, 0);
-      fetchOnChainHistory(address);
     } catch (e) {
       const msg = (e?.reason || e?.message || "").toLowerCase();
-      if (msg.includes("-32002")) {
-        setSignError("MetaMask has a pending request. Complete or reject it first.");
-      } else if (msg.includes("cancelled") || msg.includes("rejected by user") || msg.includes("4001")) {
-        setSignError("Connection cancelled. Approve the network switch and signature in your wallet.");
-      } else if (msg.includes("add")) {
-        setSignError("Arc Testnet was not added. Add it manually in wallet settings.");
+      if (msg.includes("cancelled") || msg.includes("rejected by user") || msg.includes("4001")) {
+        setSignError("Connection cancelled. Approve the signature in your wallet.");
       } else {
         setSignError("Connection failed. Make sure your wallet is unlocked and try again.");
       }
       setSignStep("error");
       setConnecting(false);
     }
-  };
+  }, [connector]);
+
+  // ─── Trigger SIWE when RainbowKit connects ──────────────────────
+  useEffect(() => {
+    if (isConnected && !wallet && signStep === 'idle') {
+      setSignStep('waiting');
+      const t = setTimeout(() => doSiweAuth(), 600);
+      return () => clearTimeout(t);
+    }
+  }, [isConnected, wallet, signStep, doSiweAuth]);
+
   const disconnectWallet = () => {
     if (wallet && txHistory.length > 0) {
       localStorage.setItem(STORAGE_PREFIX + wallet.toLowerCase(), JSON.stringify(txHistory));
@@ -219,6 +147,32 @@ export default function App() {
     setPage("home");
     localStorage.removeItem(SESSION_KEY);
   };
+
+  // ─── Vault data ─────────────────────────────────────────────────
+  const vaultData = useVaultData(wallet, getSigner);
+  const { deposits, interests, stats, leaderboard, walletBal,
+          isLoading, isSuccess, statusMsg, setStatusMsg,
+          txHistory, setTxHistory,
+          fetchChainData, handleDeposit: vaultDeposit, handleWithdraw: vaultWithdraw,
+          refreshBalance, fetchOnChainHistory,
+  } = vaultData;
+
+  // ─── Prediction data ────────────────────────────────────────────
+  const predData = useV3PredictionData(wallet, getSigner);
+  const { markets, mkLoading, betAmt, setBetAmt, sellAmt, setSellAmt,
+          activeMktId, setActiveMktId, actionTab, setActionTab,
+          showCreateForm, setShowCreateForm, newMkt, setNewMkt, creating,
+          payoutEst, sellPayout, positions, now, marketTab, setMarketTab, tokBal,
+          fetchMarkets, fetchPayoutEst, buyTokens, sellTokens, createMarket, resolveMarket, claimWinnings,
+          isOwner, siteLogo, siteName, pmTxHistory, pmTxLoading, pmTxPage, setPmTxPage, PM_TX_PAGE_SIZE, claimWinningsOnChain,
+          fetchPendingFees, fetchContractConfig,
+          eurcRate, PAYMENT_TOKENS,
+          usdcBal, eurcBal,
+  } = predData;
+
+  // ─── Supabase sync ──────────────────────────────────────────────
+  const supabaseData = useSupabaseSync(wallet, getSigner);
+  const { syncBet, syncMarketResult, syncVaultDeposit, syncVaultWithdraw } = supabaseData;
 
   // Poll vault
   useEffect(() => {
@@ -229,7 +183,7 @@ export default function App() {
     return () => clearInterval(id);
   }, [wallet]); // eslint-disable-line
 
-  // Auto-reconnect
+  // Auto-reconnect via stored session
   useEffect(() => {
     (async () => {
       if (!window.ethereum) return;
@@ -240,7 +194,6 @@ export default function App() {
         if (!sig || Date.now() - at > SESSION_TTL_MS) { localStorage.removeItem(SESSION_KEY); return; }
         const accounts = await window.ethereum.request({ method: "eth_accounts" });
         if (!accounts?.length || accounts[0].toLowerCase() !== address.toLowerCase()) return;
-        await switchToArcNetwork();
         setWallet(address);
         const signer = await getSigner();
         await fetchChainData(signer);
@@ -287,13 +240,12 @@ export default function App() {
 
       {!wallet ? (
         <Landing
-          connectWallet={connectWallet}
           connecting={connecting} setConnecting={setConnecting}
           signStep={signStep} setSignStep={setSignStep}
-          selectedWallet={selectedWallet} setSelectedWallet={setSelectedWallet}
           signError={signError} setSignError={setSignError}
           authStep={authStep} setAuthStep={setAuthStep} setAuthError={setAuthError} />
       ) : (
+        /* ── Authenticated app ──────────────────────────────────── */
         <>
           <Nav page={page} setPage={setPage} isOwner={isOwner} />
 
@@ -398,5 +350,14 @@ export default function App() {
       <HowItWorks isOpen={showHowItWorks} onClose={() => setShowHowItWorks(false)} isDark={isDark} />
     </div>
     </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  const [isDark, setIsDark] = useState(() => (localStorage.getItem("vt_theme") || "dark") === "dark");
+  return (
+    <WalletProvider isDark={isDark}>
+      <AppContent />
+    </WalletProvider>
   );
 }

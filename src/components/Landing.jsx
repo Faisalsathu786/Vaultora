@@ -1,28 +1,16 @@
-import { useState } from 'react';
-import WalletModal from './WalletModal.jsx';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import SignInModal from './SignInModal.jsx';
 
 export default function Landing({
-  connectWallet,
   connecting, setConnecting,
   signStep, setSignStep,
-  selectedWallet, setSelectedWallet,
   signError, setSignError,
   authStep, setAuthStep, setAuthError,
 }) {
-  const [walletModalOpen, setWalletModalOpen] = useState(false);
-
-  const handleWalletSelect = async (wallet) => {
-    setWalletModalOpen(false);
-    setSelectedWallet(wallet);
-    setSignStep('waiting');
+  const handleCancel = () => {
+    setSignStep('idle');
     setSignError(null);
-  };
-
-  const handleSign = () => {
-    setSignStep('signing');
-    setConnecting(true);
-    connectWallet(selectedWallet);
+    setConnecting(false);
   };
 
   return (
@@ -38,32 +26,19 @@ export default function Landing({
         Stablecoin vaults with competitive yields and on-chain prediction markets on Arc Testnet.
       </p>
 
-      <button className="btn-primary hero-cta" onClick={() => setWalletModalOpen(true)}>
-        Connect Wallet
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
+        <ConnectButton />
+      </div>
 
-      <WalletModal
-        isOpen={walletModalOpen}
-        onClose={() => setWalletModalOpen(false)}
-        onSelect={handleWalletSelect}
-        connecting={connecting}
-        error={signError}
-      />
-
-      {selectedWallet && signStep !== 'idle' && (
+      {signStep !== 'idle' && (
         <SignInModal
           step={signStep}
-          walletName={selectedWallet.name}
-          walletIcon={selectedWallet.icon}
+          walletName="Your Wallet"
+          walletIcon={null}
           error={signError}
           appName="Vaultora"
-          onSign={handleSign}
-          onCancel={() => {
-            setSignStep('idle');
-            setSelectedWallet(null);
-            setSignError(null);
-            setConnecting(false);
-          }}
+          onSign={() => {}}
+          onCancel={handleCancel}
         />
       )}
     </div>
